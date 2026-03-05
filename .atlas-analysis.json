@@ -1,0 +1,121 @@
+{
+  "projectType": "framework",
+  "projectName": "Klisk",
+  "projectDescription": "A Python framework for building AI agents programmatically with interactive development and multi-provider LLM support",
+  "theme": "palm",
+  "primaryColor": "#8B5CF6",
+  "lightColor": "#A78BFA",
+  "darkColor": "#7C3AED",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "installation"]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/agents",
+              "concepts/tools",
+              "concepts/models",
+              "concepts/builtin-tools"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/studio",
+              "development/project-structure",
+              "development/configuration"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/production-server",
+              "deployment/cloud-run",
+              "deployment/rest-api"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core API",
+            "pages": [
+              "api/define-agent",
+              "api/tool-decorator",
+              "api/get-tools"
+            ]
+          },
+          {
+            "group": "Builtin Tools",
+            "pages": [
+              "api/web-search",
+              "api/code-interpreter",
+              "api/file-search",
+              "api/image-generation"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "api/project-config",
+              "api/agent-registry"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/create",
+              "cli/dev",
+              "cli/run",
+              "cli/serve",
+              "cli/deploy",
+              "cli/check",
+              "cli/list"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Simple API for defining agents and tools",
+    "Interactive Studio with visual agent graph and live chat",
+    "Multi-provider LLM support via LiteLLM",
+    "Built-in tools (web search, code interpreter, file search, image generation)",
+    "Hot reload during development",
+    "One-command deployment to Google Cloud Run",
+    "Production-ready REST API and WebSocket endpoints",
+    "Reasoning model support (o-series and gpt-5+)"
+  ],
+  "publicApiSurface": [
+    "define_agent()",
+    "@tool decorator",
+    "get_tools()",
+    "AgentRegistry",
+    "ProjectConfig",
+    "WebSearch",
+    "CodeInterpreter",
+    "FileSearch",
+    "ImageGeneration",
+    "klisk create",
+    "klisk dev",
+    "klisk run",
+    "klisk serve",
+    "klisk deploy",
+    "klisk check",
+    "klisk list"
+  ]
+}
