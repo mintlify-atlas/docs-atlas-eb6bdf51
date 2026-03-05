@@ -1,0 +1,318 @@
+---
+title: Installation
+description: Install Klisk and set up your development environment
+---
+
+Klisk is a Python package that can be installed via pip. This guide covers installation, requirements, and verification.
+
+## Requirements
+
+<Steps>
+  <Step title="Python Version">
+    Klisk requires **Python 3.10 or higher**. Check your Python version:
+
+    ```bash
+    python --version
+    ```
+
+    If you need to upgrade Python, download the latest version from [python.org](https://www.python.org/downloads/).
+  </Step>
+
+  <Step title="API Keys">
+    You'll need an API key for at least one LLM provider:
+
+    - **OpenAI** — Get your API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+    - **Anthropic** — Get your API key at [console.anthropic.com](https://console.anthropic.com)
+    - **Google** — Get your API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+    - **Mistral** — Get your API key at [console.mistral.ai](https://console.mistral.ai)
+
+    <Info>
+    OpenAI is the default provider, but Klisk supports any LiteLLM-compatible provider.
+    </Info>
+  </Step>
+
+  <Step title="Operating System">
+    Klisk works on:
+    - **macOS** (recommended for development)
+    - **Linux** (Ubuntu, Debian, CentOS, etc.)
+    - **Windows** (via WSL or native)
+
+    <Note>
+    Windows users should use WSL (Windows Subsystem for Linux) for the best experience.
+    </Note>
+  </Step>
+</Steps>
+
+## Install Klisk
+
+Install Klisk using pip:
+
+```bash
+pip install klisk
+```
+
+This installs:
+- The `klisk` CLI command
+- The Klisk Python library
+- All required dependencies (OpenAI Agents SDK, FastAPI, LiteLLM, etc.)
+
+### Install in a Virtual Environment (Recommended)
+
+It's best practice to install Klisk in a virtual environment:
+
+<CodeGroup>
+```bash venv (recommended)
+# Create a virtual environment
+python -m venv venv
+
+# Activate it (macOS/Linux)
+source venv/bin/activate
+
+# Activate it (Windows)
+venv\Scripts\activate
+
+# Install Klisk
+pip install klisk
+```
+
+```bash conda
+# Create a conda environment
+conda create -n klisk python=3.11
+
+# Activate it
+conda activate klisk
+
+# Install Klisk
+pip install klisk
+```
+
+```bash poetry
+# Initialize a new project
+poetry init
+
+# Add Klisk as a dependency
+poetry add klisk
+
+# Install dependencies
+poetry install
+```
+</CodeGroup>
+
+### Install Development Dependencies
+
+If you plan to contribute to Klisk or run tests, install the development dependencies:
+
+```bash
+pip install klisk[dev]
+```
+
+This includes:
+- `pytest` — Testing framework
+- `pytest-asyncio` — Async test support
+- `httpx` — HTTP client for testing
+
+## Verify Installation
+
+Confirm that Klisk is installed correctly:
+
+```bash
+klisk --version
+```
+
+You should see output like:
+
+```
+klisk version 0.1.3
+```
+
+### View Available Commands
+
+List all available CLI commands:
+
+```bash
+klisk --help
+```
+
+You should see:
+
+```
+Usage: klisk [OPTIONS] COMMAND [ARGS]...
+
+  Klisk - Build AI agents programmatically
+
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+Commands:
+  create   Scaffold a new agent project
+  dev      Start Studio with hot reload
+  run      Run agent from terminal
+  check    Validate project configuration
+  list     List workspace projects
+  serve    Start production server
+  deploy   Deploy to Google Cloud Run
+```
+
+## Configure API Keys
+
+After installation, you'll need to configure your API keys. There are two ways to do this:
+
+### Option 1: Project .env File (Recommended)
+
+When you create a new project with `klisk create`, a `.env` file is automatically generated. Add your API keys there:
+
+```bash .env
+OPENAI_API_KEY=sk-your-key-here
+
+# Uncomment and fill in the API key for your chosen provider:
+# ANTHROPIC_API_KEY=sk-ant-your-key-here
+# GEMINI_API_KEY=your-key-here
+# MISTRAL_API_KEY=your-key-here
+```
+
+<Warning>
+Never commit your `.env` file to version control. Klisk projects include `.env` in `.gitignore` by default.
+</Warning>
+
+### Option 2: System Environment Variables
+
+You can also set environment variables globally:
+
+<CodeGroup>
+```bash macOS/Linux
+# Add to ~/.bashrc or ~/.zshrc
+export OPENAI_API_KEY="sk-your-key-here"
+export ANTHROPIC_API_KEY="sk-ant-your-key-here"
+
+# Reload your shell
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+```bash Windows (PowerShell)
+# Set for current session
+$env:OPENAI_API_KEY = "sk-your-key-here"
+
+# Set permanently
+[System.Environment]::SetEnvironmentVariable('OPENAI_API_KEY', 'sk-your-key-here', 'User')
+```
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: klisk">
+    If you get a "command not found" error after installation:
+
+    1. **Check if pip installed to the correct location:**
+       ```bash
+       pip show klisk
+       ```
+
+    2. **Ensure pip's bin directory is in your PATH:**
+       ```bash
+       # macOS/Linux
+       export PATH="$HOME/.local/bin:$PATH"
+
+       # Add this to ~/.bashrc or ~/.zshrc to make it permanent
+       ```
+
+    3. **Try using `python -m klisk` instead:**
+       ```bash
+       python -m klisk --version
+       ```
+  </Accordion>
+
+  <Accordion title="ModuleNotFoundError: No module named 'klisk'">
+    This usually means Klisk wasn't installed in your current Python environment:
+
+    1. **Verify your Python environment:**
+       ```bash
+       which python
+       which pip
+       ```
+
+    2. **Reinstall Klisk:**
+       ```bash
+       pip uninstall klisk
+       pip install klisk
+       ```
+
+    3. **If using a virtual environment, make sure it's activated:**
+       ```bash
+       source venv/bin/activate  # macOS/Linux
+       venv\Scripts\activate      # Windows
+       ```
+  </Accordion>
+
+  <Accordion title="ImportError: LiteLLM is required">
+    If you see an error about LiteLLM when using non-OpenAI models:
+
+    ```bash
+    pip install litellm
+    ```
+
+    Or reinstall Klisk with LiteLLM support:
+
+    ```bash
+    pip install 'openai-agents[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Python version too old">
+    Klisk requires Python 3.10 or higher. If you have an older version:
+
+    1. **Install a newer Python version** from [python.org](https://www.python.org/downloads/)
+
+    2. **Create a virtual environment with the new version:**
+       ```bash
+       python3.11 -m venv venv
+       source venv/bin/activate
+       pip install klisk
+       ```
+
+    3. **Or use pyenv to manage multiple Python versions:**
+       ```bash
+       pyenv install 3.11.0
+       pyenv local 3.11.0
+       pip install klisk
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Upgrade Klisk
+
+To upgrade to the latest version:
+
+```bash
+pip install --upgrade klisk
+```
+
+Check your current version:
+
+```bash
+klisk --version
+```
+
+## Uninstall Klisk
+
+To uninstall Klisk:
+
+```bash
+pip uninstall klisk
+```
+
+This removes the `klisk` command and Python package, but preserves your agent projects.
+
+## Next Steps
+
+Now that Klisk is installed, you're ready to build your first agent:
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Build your first agent in 5 minutes
+  </Card>
+  <Card title="Introduction" icon="book" href="/introduction">
+    Learn about Klisk's features and capabilities
+  </Card>
+</CardGroup>

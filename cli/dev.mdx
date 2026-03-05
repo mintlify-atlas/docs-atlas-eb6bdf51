@@ -1,0 +1,140 @@
+---
+title: klisk dev
+description: Start the Klisk Studio and development server with hot reload
+---
+
+## Usage
+
+```bash
+klisk dev [name_or_path]
+```
+
+## Description
+
+Launches the Klisk Studio (web UI) and development server with hot reload. Supports both single-project mode and workspace mode for managing multiple projects.
+
+## Arguments
+
+<ParamField path="name_or_path" type="string">
+  Project name or path. Omit to run in workspace mode (load all projects).
+</ParamField>
+
+## Modes
+
+### Single-Project Mode
+
+Run a specific project:
+
+```bash
+klisk dev my-agent
+```
+
+Output:
+```
+  Studio + API: http://localhost:8000
+  Project:      ~/klisk/my-agent
+  Watching for changes...
+```
+
+Behavior:
+- Loads environment variables from `<project>/.env`
+- Uses the port specified in `klisk.config.yaml` (default: 8000)
+- Watches the project directory for file changes
+- Hot-reloads agents and tools on modification
+
+### Workspace Mode
+
+Run without arguments to load all projects:
+
+```bash
+klisk dev
+```
+
+Output:
+```
+  Studio + API: http://localhost:8000
+  Workspace:    ~/klisk
+  Watching all projects for changes...
+```
+
+Behavior:
+- Discovers and loads all projects in `~/klisk/`
+- Loads environment variables from each project's `.env`
+- Runs on port 8000 (fixed)
+- Watches all project directories simultaneously
+
+## Server Details
+
+The dev server provides:
+
+- **Studio UI** at `http://localhost:<port>` - Interactive testing environment
+- **Chat API** at `http://localhost:<port>/api/chat` - REST endpoint for agent interactions
+- **Health Check** at `http://localhost:<port>/health` - Server status
+
+### Hot Reload
+
+The server automatically reloads when you modify:
+- Agent definitions in Python files
+- Tool implementations
+- Configuration in `klisk.config.yaml`
+
+## Configuration
+
+The port is read from `klisk.config.yaml`:
+
+```yaml
+api:
+  port: 8000  # Customize the dev server port
+```
+
+## Examples
+
+### Start a Specific Project
+
+```bash
+klisk dev customer-support
+```
+
+### Start Using a Path
+
+```bash
+klisk dev ~/my-custom-location/agent-project
+```
+
+### Start Workspace Mode
+
+```bash
+klisk dev
+```
+
+## Environment Variables
+
+Make sure your `.env` file includes required API keys:
+
+```bash
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Error Handling
+
+Common issues:
+
+- **Port already in use**: Change the port in `klisk.config.yaml` or stop the conflicting process
+- **Project not found**: Verify the project name or path exists
+- **Missing .env**: Create `.env` from `.env.example` and add your API keys
+
+## Development Workflow
+
+1. Start the dev server: `klisk dev my-agent`
+2. Open Studio in browser: `http://localhost:8000`
+3. Test your agent interactively
+4. Edit agent code - changes reload automatically
+5. Refresh browser to see updates
+
+## Related Commands
+
+- [`klisk create`](/cli/create) - Create a new project
+- [`klisk run`](/cli/run) - Run agent from CLI
+- [`klisk serve`](/cli/serve) - Production server
+- [`klisk check`](/cli/check) - Validate project

@@ -1,0 +1,309 @@
+---
+title: Interactive Studio
+description: Visual development environment with live agent graphs, chat interface, and hot reload
+---
+
+The Klisk Studio is an interactive development environment that runs in your browser. It provides a visual interface for testing agents, inspecting tool calls, and editing configurations in real-time.
+
+## Starting the Studio
+
+Launch the Studio with the `dev` command:
+
+```bash
+klisk dev my-agent
+```
+
+The Studio opens at `http://localhost:8000` (or your configured port) and includes:
+
+- **Agent Graph** — visual representation of agents and their connected tools
+- **Live Chat** — interactive testing with streaming responses
+- **Inline Editing** — modify agent properties directly from the UI
+- **Hot Reload** — changes to your code update the Studio instantly
+
+## Workspace Mode
+
+Run the Studio without specifying a project to work with all projects in your workspace:
+
+```bash
+klisk dev
+```
+
+This loads all projects from `~/.klisk/projects/` and allows you to switch between agents:
+
+```
+  Studio + API: http://localhost:8000
+  Workspace:    ~/.klisk/projects
+  Watching all projects for changes...
+```
+
+## Agent Graph
+
+The visual graph displays your agent architecture using a node-based layout:
+
+- **Agent nodes** show the agent name, model, and instructions
+- **Tool nodes** display tool names and descriptions
+- **Edges** connect agents to their available tools
+
+Click any node to open an editor modal and modify its configuration.
+
+### Graph Controls
+
+<CardGroup cols={3}>
+  <Card title="Pan" icon="hand">
+    Click and drag the canvas to navigate
+  </Card>
+  <Card title="Zoom" icon="magnifying-glass">
+    Use mouse wheel or zoom controls
+  </Card>
+  <Card title="Fit View" icon="expand">
+    Auto-center all nodes in viewport
+  </Card>
+</CardGroup>
+
+## Live Chat Interface
+
+The right panel provides a chat interface for testing your agent:
+
+### Message Input
+
+- Type messages in the input box at the bottom
+- Press **Enter** to send, **Shift+Enter** for new lines
+- Attach files by clicking the paperclip icon or drag-and-drop
+
+### Supported Attachments
+
+<AccordionGroup>
+  <Accordion title="Images">
+    JPEG, PNG, GIF, WebP up to 20MB
+  </Accordion>
+  <Accordion title="Documents">
+    PDF files up to 20MB
+  </Accordion>
+</AccordionGroup>
+
+### Message Types
+
+The chat displays different message types with distinct styling:
+
+<CodeGroup>
+```text User Messages
+Blue background, right-aligned
+Shows attached files as previews
+```
+
+```text Assistant Responses
+Gray background, left-aligned
+Markdown-rendered with syntax highlighting
+```
+
+```text Tool Calls
+Collapsible cards showing:
+- Tool name with icon
+- Arguments (JSON)
+- Output (truncated if long)
+- Status: running | done
+```
+
+```text Thinking (Reasoning Models)
+Collapsible purple card
+Shows internal reasoning for o-series models
+```
+
+```text System Errors
+Red border, left-aligned
+Displays errors from the agent or server
+```
+</CodeGroup>
+
+## Inline Editing
+
+Click any agent or tool node to open an editor modal.
+
+### Editing Agents
+
+The agent editor allows you to modify:
+
+<ParamField path="name" type="string">
+  Agent identifier (updates variable name in source)
+</ParamField>
+
+<ParamField path="instructions" type="string">
+  System prompt defining agent behavior
+</ParamField>
+
+<ParamField path="model" type="string">
+  LLM model (select from curated list or enter custom)
+</ParamField>
+
+<ParamField path="temperature" type="number">
+  Sampling temperature (0.0 to 2.0)
+</ParamField>
+
+<ParamField path="reasoning_effort" type="string">
+  For reasoning models: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
+</ParamField>
+
+### Editing Tools
+
+The tool editor supports:
+
+<ParamField path="name" type="string">
+  Function name (renames function and updates all references)
+</ParamField>
+
+<ParamField path="description" type="string">
+  Docstring shown to the LLM (updates function docstring)
+</ParamField>
+
+<Note>
+  Edits are applied directly to your source files using AST-based rewriting. The Studio uses WebSockets to detect changes and reload instantly.
+</Note>
+
+## Hot Reload
+
+The Studio watches your project directory for file changes and reloads automatically.
+
+### Watched Files
+
+```python
+# From watcher.py
+def _is_relevant(path: str) -> bool:
+    p = Path(path)
+    # Ignore hidden dirs, __pycache__, node_modules, .venv
+    parts = p.parts
+    if any(part.startswith(".") or part == "__pycache__" 
+           or part == "node_modules" or part == ".venv" 
+           for part in parts):
+        return False
+    return p.suffix in {".py", ".yaml", ".yml"}
+```
+
+Changes to `.py`, `.yaml`, or `.yml` files trigger a reload:
+
+1. File watcher detects the change
+2. Project is re-scanned to discover agents and tools
+3. Updated snapshot is pushed to all connected clients via WebSocket
+4. Studio displays a toast notification: "Project reloaded"
+
+<Warning>
+  If an agent is removed during hot reload, the Studio automatically navigates back to the agent listing to prevent errors.
+</Warning>
+
+## WebSocket Architecture
+
+The Studio uses two WebSocket connections:
+
+### Chat WebSocket (`/ws/chat`)
+
+Handles agent interactions with streaming events:
+
+```typescript
+// Event types from the server
+type ChatEvent =
+  | { type: "thinking"; data: string }      // Reasoning model thoughts
+  | { type: "token"; data: string }         // Streamed response tokens
+  | { type: "tool_call"; data: { tool: string; arguments: string } }
+  | { type: "tool_result"; data: { output: string } }
+  | { type: "done"; response_id: string }   // Conversation complete
+  | { type: "error"; data: string }         // Error message
+```
+
+### Reload WebSocket (`/ws/reload`)
+
+Receives project updates when files change:
+
+```typescript
+type ReloadEvent = {
+  type: "reload";
+  snapshot: ProjectSnapshot;  // Updated agents, tools, config
+};
+```
+
+## Theme Toggle
+
+The Studio supports light and dark themes. Click the sun/moon icon in the header to switch. Your preference is saved to `localStorage`.
+
+## Reset Conversation
+
+Click the reset icon in the header to clear the chat history and start a new conversation. This:
+
+- Clears all messages from the UI
+- Removes stored conversation state from `localStorage`
+- Sends a `{"type": "clear"}` message to reset server-side context
+
+## Connection Status
+
+The header displays a connection indicator:
+
+- <Icon icon="circle" color="green" /> **Connected** — WebSocket active
+- <Icon icon="circle" color="red" /> **Disconnected** — Connection lost, attempting reconnect
+
+## Keyboard Shortcuts
+
+<ResponseField name="Escape" type="Close modal">
+  Dismiss the currently open agent or tool editor
+</ResponseField>
+
+<ResponseField name="Enter" type="Send message">
+  Submit the current message in chat
+</ResponseField>
+
+<ResponseField name="Shift+Enter" type="New line">
+  Insert line break in message input
+</ResponseField>
+
+## Persistence
+
+Chat messages are saved to `localStorage` scoped by agent name:
+
+```typescript
+// Storage keys per agent
+const messagesKey = `klisk-chat-messages-${agentName}`;
+const responseIdKey = `klisk-chat-response-id-${agentName}`;
+```
+
+This allows you to:
+
+- Switch between agents without losing conversations
+- Reload the page and resume where you left off
+- Maintain separate chat histories for each agent
+
+<Tip>
+  File attachments are not persisted to avoid storing large base64 data in localStorage. Only attachment metadata (name, type) is saved.
+</Tip>
+
+## Multi-Agent Workspace
+
+In workspace mode, the Studio displays an agent listing page showing all discovered agents across projects:
+
+- Click any agent card to open its graph and chat interface
+- Use the back arrow to return to the listing
+- Each agent maintains its own chat history
+
+## Production API Integration
+
+The Studio's backend provides REST endpoints used by the UI:
+
+<CodeGroup>
+```bash Get Project Snapshot
+curl http://localhost:8000/api/project
+```
+
+```bash Get Available Models
+curl http://localhost:8000/api/models
+```
+
+```bash Update Agent
+curl -X PUT http://localhost:8000/api/agents/Assistant \
+  -H "Content-Type: application/json" \
+  -d '{"instructions": "New instructions"}'
+```
+
+```bash Update Tool
+curl -X PUT http://localhost:8000/api/tools/greet \
+  -H "Content-Type: application/json" \
+  -d '{"description": "New description"}'
+```
+</CodeGroup>
+
+These endpoints enable programmatic control and integration with external tools.

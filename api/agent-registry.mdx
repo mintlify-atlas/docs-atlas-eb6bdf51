@@ -1,0 +1,300 @@
+---
+title: AgentRegistry
+description: Global registry for tracking agents and tools in Klisk projects
+---
+
+## AgentRegistry
+
+Singleton registry that tracks all agents and tools in the project.
+
+### Fields
+
+<ParamField path="agents" type="dict[str, AgentEntry]">
+  Dictionary mapping agent names to their registry entries
+</ParamField>
+
+<ParamField path="tools" type="dict[str, ToolEntry]">
+  Dictionary mapping tool names to their registry entries
+</ParamField>
+
+### Methods
+
+#### get_instance
+
+```python
+@classmethod
+def get_instance(cls) -> AgentRegistry
+```
+
+Get the singleton instance of the registry.
+
+<ResponseField name="return" type="AgentRegistry">
+  The singleton AgentRegistry instance
+</ResponseField>
+
+**Example:**
+
+```python
+from klisk.core.registry import AgentRegistry
+
+registry = AgentRegistry.get_instance()
+```
+
+#### register_agent
+
+```python
+def register_agent(self, entry: AgentEntry) -> None
+```
+
+Register an agent in the registry.
+
+<ParamField path="entry" type="AgentEntry" required>
+  Agent entry to register
+</ParamField>
+
+**Example:**
+
+```python
+from klisk.core.registry import AgentRegistry, AgentEntry
+
+registry = AgentRegistry.get_instance()
+agent = AgentEntry(
+    name="my_agent",
+    instructions="You are a helpful assistant",
+    model="claude-3-5-sonnet-20241022"
+)
+registry.register_agent(agent)
+```
+
+#### register_tool
+
+```python
+def register_tool(self, entry: ToolEntry) -> None
+```
+
+Register a tool in the registry.
+
+<ParamField path="entry" type="ToolEntry" required>
+  Tool entry to register
+</ParamField>
+
+**Example:**
+
+```python
+from klisk.core.registry import AgentRegistry, ToolEntry
+
+registry = AgentRegistry.get_instance()
+tool = ToolEntry(
+    name="calculator",
+    description="Performs calculations",
+    parameters={"expression": {"type": "string"}}
+)
+registry.register_tool(tool)
+```
+
+#### get_agent
+
+```python
+def get_agent(self, name: str) -> AgentEntry | None
+```
+
+Retrieve an agent by name.
+
+<ParamField path="name" type="str" required>
+  Name of the agent to retrieve
+</ParamField>
+
+<ResponseField name="return" type="AgentEntry | None">
+  The agent entry if found, None otherwise
+</ResponseField>
+
+**Example:**
+
+```python
+registry = AgentRegistry.get_instance()
+agent = registry.get_agent("my_agent")
+if agent:
+    print(agent.instructions)
+```
+
+#### get_tool
+
+```python
+def get_tool(self, name: str) -> ToolEntry | None
+```
+
+Retrieve a tool by name.
+
+<ParamField path="name" type="str" required>
+  Name of the tool to retrieve
+</ParamField>
+
+<ResponseField name="return" type="ToolEntry | None">
+  The tool entry if found, None otherwise
+</ResponseField>
+
+**Example:**
+
+```python
+registry = AgentRegistry.get_instance()
+tool = registry.get_tool("calculator")
+if tool:
+    print(tool.description)
+```
+
+#### get_project_snapshot
+
+```python
+def get_project_snapshot(self) -> ProjectSnapshot
+```
+
+Get a snapshot of all registered agents and tools.
+
+<ResponseField name="return" type="ProjectSnapshot">
+  Snapshot containing copies of all agents and tools
+</ResponseField>
+
+**Example:**
+
+```python
+registry = AgentRegistry.get_instance()
+snapshot = registry.get_project_snapshot()
+print(snapshot.to_dict())
+```
+
+#### clear
+
+```python
+def clear(self) -> None
+```
+
+Clear all registered agents and tools from the registry.
+
+**Example:**
+
+```python
+registry = AgentRegistry.get_instance()
+registry.clear()
+```
+
+#### reset
+
+```python
+@classmethod
+def reset(cls) -> None
+```
+
+Reset the singleton instance. Useful for testing.
+
+**Example:**
+
+```python
+AgentRegistry.reset()
+```
+
+---
+
+## AgentEntry
+
+Dataclass representing a registered agent.
+
+### Fields
+
+<ParamField path="name" type="str" required>
+  Unique name of the agent
+</ParamField>
+
+<ParamField path="instructions" type="str | None">
+  System instructions for the agent
+</ParamField>
+
+<ParamField path="model" type="str | None">
+  Model identifier (e.g., "claude-3-5-sonnet-20241022")
+</ParamField>
+
+<ParamField path="tools" type="list[str]" default="[]">
+  List of tool names available to the agent
+</ParamField>
+
+<ParamField path="temperature" type="float | None">
+  Temperature parameter for model sampling
+</ParamField>
+
+<ParamField path="reasoning_effort" type="str | None">
+  Reasoning effort level for the agent
+</ParamField>
+
+<ParamField path="source_file" type="str | None">
+  Path to the source file where the agent is defined
+</ParamField>
+
+<ParamField path="sdk_agent" type="Any">
+  The underlying Agent object from the SDK
+</ParamField>
+
+<ParamField path="project" type="str | None">
+  Project name this agent belongs to
+</ParamField>
+
+**Example:**
+
+```python
+from klisk.core.registry import AgentEntry
+
+agent = AgentEntry(
+    name="assistant",
+    instructions="You are a helpful coding assistant",
+    model="claude-3-5-sonnet-20241022",
+    tools=["code_analyzer", "file_reader"],
+    temperature=0.7,
+    source_file="src/agents.py"
+)
+```
+
+---
+
+## ToolEntry
+
+Dataclass representing a registered tool.
+
+### Fields
+
+<ParamField path="name" type="str" required>
+  Unique name of the tool
+</ParamField>
+
+<ParamField path="description" type="str" required>
+  Description of what the tool does
+</ParamField>
+
+<ParamField path="parameters" type="dict[str, Any]" required>
+  JSON Schema defining the tool's parameters
+</ParamField>
+
+<ParamField path="source_file" type="str | None">
+  Path to the source file where the tool is defined
+</ParamField>
+
+<ParamField path="function_tool" type="Any">
+  The underlying FunctionTool object from the SDK
+</ParamField>
+
+<ParamField path="project" type="str | None">
+  Project name this tool belongs to
+</ParamField>
+
+**Example:**
+
+```python
+from klisk.core.registry import ToolEntry
+
+tool = ToolEntry(
+    name="search",
+    description="Search for information",
+    parameters={
+        "query": {"type": "string", "description": "Search query"},
+        "limit": {"type": "integer", "default": 10}
+    },
+    source_file="src/tools.py"
+)
+```

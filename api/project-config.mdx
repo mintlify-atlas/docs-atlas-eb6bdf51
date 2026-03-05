@@ -1,0 +1,95 @@
+---
+title: ProjectConfig
+description: Configuration classes for Klisk projects
+---
+
+## ProjectConfig
+
+Main configuration class for Klisk projects, loaded from `klisk.config.yaml`.
+
+### Fields
+
+<ParamField path="entry" type="str" default="src/main.py">
+  Entry point file for the Klisk project
+</ParamField>
+
+<ParamField path="name" type="str" default="MyAgent">
+  Name of the agent project
+</ParamField>
+
+<ParamField path="studio" type="StudioConfig" default="StudioConfig()">
+  Configuration for the Klisk Studio development interface
+</ParamField>
+
+<ParamField path="api" type="ApiConfig" default="ApiConfig()">
+  Configuration for the API server
+</ParamField>
+
+### Methods
+
+#### load
+
+```python
+@classmethod
+def load(cls, project_dir: str | Path) -> ProjectConfig
+```
+
+Load configuration from a project directory.
+
+<ParamField path="project_dir" type="str | Path" required>
+  Path to the project directory containing `klisk.config.yaml`
+</ParamField>
+
+<ResponseField name="return" type="ProjectConfig">
+  Loaded project configuration. Returns a default configuration if `klisk.config.yaml` does not exist.
+</ResponseField>
+
+**Example:**
+
+```python
+from klisk.core.config import ProjectConfig
+
+config = ProjectConfig.load("/path/to/project")
+print(config.name)  # "MyAgent"
+print(config.entry)  # "src/main.py"
+```
+
+---
+
+## StudioConfig
+
+Configuration for the Klisk Studio development interface.
+
+### Fields
+
+<ParamField path="port" type="int" default="3000">
+  Port number for the Studio web interface
+</ParamField>
+
+**Example:**
+
+```python
+from klisk.core.config import StudioConfig
+
+studio = StudioConfig(port=3001)
+```
+
+---
+
+## ApiConfig
+
+Configuration for the Klisk API server.
+
+### Fields
+
+<ParamField path="port" type="int" default="8000">
+  Port number for the API server
+</ParamField>
+
+**Example:**
+
+```python
+from klisk.core.config import ApiConfig
+
+api = ApiConfig(port=8080)
+```

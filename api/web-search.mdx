@@ -1,0 +1,77 @@
+---
+title: "WebSearch"
+description: "Web search builtin tool for OpenAI models"
+---
+
+## Overview
+
+The `WebSearch` class provides web search capabilities for agents. This builtin tool is only supported with OpenAI models and allows agents to search the web for information.
+
+## Class Definition
+
+```python
+from klisk.core.builtin_tools import WebSearch
+```
+
+Defined in: `src/klisk/core/builtin_tools.py:9`
+
+## Parameters
+
+<ParamField path="search_context_size" type="Literal['low', 'medium', 'high']" default="medium">
+  Controls the amount of search context returned. Options:
+  - `"low"` - Minimal search context
+  - `"medium"` - Balanced search context (default)
+  - `"high"` - Maximum search context
+</ParamField>
+
+## Usage
+
+### Basic Usage (String Shortcut)
+
+```python
+from klisk import define_agent
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=["web_search"],
+)
+```
+
+### Object Form with Custom Configuration
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import WebSearch
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        WebSearch(search_context_size="high")
+    ],
+)
+```
+
+### Multiple Builtin Tools
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import WebSearch
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        WebSearch(search_context_size="medium"),
+        "code_interpreter",
+    ],
+)
+```
+
+## Important Notes
+
+<Warning>
+  The `WebSearch` tool is only supported with OpenAI models. Using it with non-OpenAI models will raise a `ValueError`.
+</Warning>
+
+<Info>
+  When using the string shortcut `"web_search"`, the default `search_context_size` of `"medium"` is used.
+</Info>

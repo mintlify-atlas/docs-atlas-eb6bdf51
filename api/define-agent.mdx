@@ -1,0 +1,147 @@
+---
+title: "define_agent()"
+description: "Create and register an AI agent"
+---
+
+## Overview
+
+Create an agent and register it in the global AgentRegistry. This is a thin wrapper over the OpenAI Agents SDK `Agent` class that also registers the agent so the Studio and CLI can discover it.
+
+## Signature
+
+```python
+def define_agent(
+    *,
+    name: str,
+    instructions: str | None = None,
+    model: str | None = None,
+    temperature: float | None = None,
+    reasoning_effort: str | None = None,
+    tools: list[Any] | None = None,
+    builtin_tools: list[str | BuiltinTool] | None = None,
+    **kwargs: Any,
+) -> Agent
+```
+
+## Parameters
+
+<ParamField path="name" type="str" required>
+  The name of the agent. Used for identification in the registry and UI.
+</ParamField>
+
+<ParamField path="instructions" type="str | None" default="None">
+  System instructions that define the agent's behavior and personality. These instructions guide how the agent responds to user inputs.
+</ParamField>
+
+<ParamField path="model" type="str | None" default="None">
+  The language model to use. Defaults to `"gpt-5.2"` if not specified.
+  
+  Supports:
+  - OpenAI model names: `"gpt-5.2"`, `"gpt-4.1"`, `"o3-mini"`
+  - OpenAI with prefix: `"openai/gpt-4o"`
+  - LiteLLM provider/model format: `"anthropic/claude-3-5-sonnet-20240620"`, `"gemini/gemini-2.5-flash"`, `"mistral/mistral-large-latest"`
+  
+  When using non-OpenAI models via LiteLLM:
+  - API keys are auto-detected from environment variables (e.g., `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`)
+  - Requires `pip install litellm`
+</ParamField>
+
+<ParamField path="temperature" type="float | None" default="None">
+  Controls randomness in the model's output. Lower values (e.g., 0.2) make output more deterministic, higher values (e.g., 0.8) make it more creative. Valid range is typically 0.0 to 2.0.
+</ParamField>
+
+<ParamField path="reasoning_effort" type="str | None" default="None">
+  Controls how much reasoning the model uses. Only supported for o-series models (o1, o3, o4-mini) and gpt-5+ (gpt-5.1, gpt-5.2).
+  
+  Supported values:
+  - `"none"` - No additional reasoning
+  - `"minimal"` - Minimal reasoning effort
+  - `"low"` - Low reasoning effort
+  - `"medium"` - Medium reasoning effort
+  - `"high"` - High reasoning effort
+  - `"xhigh"` - Extra high reasoning effort
+  
+  When using LiteLLM, this is automatically translated to each provider's equivalent parameter.
+</ParamField>
+
+<ParamField path="tools" type="list[Any] | None" default="None">
+  List of custom tools the agent can use. Tools can be:
+  - Functions decorated with `@tool`
+  - `FunctionTool` instances from the OpenAI Agents SDK
+  - Tools retrieved with `get_tools()`
+</ParamField>
+
+<ParamField path="builtin_tools" type="list[str | BuiltinTool] | None" default="None">
+  List of provider-hosted tools to enable. **Only supported with OpenAI models.**
+  
+  Can be specified as:
+  - String shortcuts: `["web_search"]`, `["code_interpreter"]`, `["file_search"]`, `["image_generation"]`
+  - Configured objects: `[WebSearch(search_context_size="high")]`, `[CodeInterpreter()]`
+  
+  If non-OpenAI models are used, builtin tools will be disabled with a warning.
+</ParamField>
+
+<ParamField path="**kwargs" type="Any">
+  Additional keyword arguments passed directly to the underlying OpenAI Agents SDK `Agent` constructor. This allows access to advanced SDK features like `model_settings`, `handoffs`, `memory`, etc.
+</ParamField>
+
+## Returns
+
+<ResponseField name="agent" type="Agent">
+  An OpenAI Agents SDK `Agent` instance that is also registered in the global `AgentRegistry`.
+</ResponseField>
+
+## Example
+
+```python
+from klisk import define_agent, tool, get_tools
+
+# Basic agent with instructions
+agent = define_agent(
+    name="Assistant",
+    instructions="You are a helpful assistant.",
+)
+
+# Agent with custom model and temperature
+agent = define_agent(
+    name="CreativeWriter",
+    instructions="You are a creative writing assistant.",
+    model="gpt-4.1",
+    temperature=0.9,
+)
+
+# Agent with LiteLLM (Anthropic Claude)
+agent = define_agent(
+    name="ClaudeAgent",
+    instructions="You are Claude, an AI assistant.",
+    model="anthropic/claude-3-5-sonnet-20240620",
+)
+
+# Agent with reasoning effort (o-series model)
+agent = define_agent(
+    name="Reasoner",
+    instructions="You solve complex problems step by step.",
+    model="o3-mini",
+    reasoning_effort="high",
+)
+
+# Agent with custom tools
+agent = define_agent(
+    name="ToolUser",
+    instructions="You can search and greet users.",
+    tools=get_tools("search", "greet"),
+)
+
+# Agent with builtin tools (OpenAI only)
+agent = define_agent(
+    name="Researcher",
+    instructions="You research topics using web search.",
+    model="gpt-4o",
+    builtin_tools=["web_search", "code_interpreter"],
+)
+```
+
+## See Also
+
+- [@tool decorator](/api/tool-decorator) - Define custom tools for agents
+- [get_tools()](/api/get-tools) - Retrieve registered tools by name

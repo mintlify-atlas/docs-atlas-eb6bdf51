@@ -1,0 +1,213 @@
+---
+title: Agents
+description: Define and configure AI agents with instructions, models, and tools
+---
+
+Agents are the core building blocks in Klisk. An agent is an AI system that can reason, use tools, and interact with users to accomplish tasks.
+
+## Defining an agent
+
+Use `define_agent()` to create and register an agent:
+
+```python
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Assistant",
+    instructions="You are a helpful assistant.",
+    model="gpt-5.2",
+    tools=get_tools("greet", "search"),
+)
+```
+
+`define_agent()` is a thin wrapper around the OpenAI Agents SDK `Agent` class that automatically registers your agent in the global `AgentRegistry` so the Studio and CLI can discover it.
+
+## Parameters
+
+### name
+
+<ParamField path="name" type="string" required>
+  The agent's unique identifier. Used in the Studio UI and for referencing the agent programmatically.
+</ParamField>
+
+```python
+agent = define_agent(
+    name="ResearchAssistant",
+    instructions="...",
+)
+```
+
+### instructions
+
+<ParamField path="instructions" type="string">
+  The system prompt that defines the agent's behavior, personality, and capabilities. This guides how the agent interprets user requests and uses tools.
+</ParamField>
+
+```python
+agent = define_agent(
+    name="CodeReviewer",
+    instructions="""You are an expert code reviewer.
+    Analyze code for bugs, security issues, and best practices.
+    Provide constructive feedback with specific examples.""",
+)
+```
+
+<Tip>
+  Use multi-line strings for complex instructions. Be specific about the agent's role, constraints, and output format.
+</Tip>
+
+### model
+
+<ParamField path="model" type="string" default="gpt-5.2">
+  The language model to use. Supports OpenAI models and any LiteLLM-compatible provider.
+</ParamField>
+
+See the [Models](/concepts/models) page for detailed information about model configuration and multi-provider support.
+
+### tools
+
+<ParamField path="tools" type="list">
+  A list of tools the agent can use. Pass `FunctionTool` objects or use `get_tools()` to retrieve registered tools by name.
+</ParamField>
+
+```python
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Assistant",
+    tools=get_tools("greet", "search", "analyze"),
+)
+```
+
+See the [Tools](/concepts/tools) page for detailed information about creating and using tools.
+
+### builtin_tools
+
+<ParamField path="builtin_tools" type="list">
+  Enable provider-hosted tools like web search and code interpreter. Only supported with OpenAI models.
+</ParamField>
+
+```python
+agent = define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    builtin_tools=["web_search", "code_interpreter"],
+)
+```
+
+See the [Builtin Tools](/concepts/builtin-tools) page for available tools and configuration options.
+
+### temperature
+
+<ParamField path="temperature" type="float">
+  Controls randomness in responses. Range: 0.0 (deterministic) to 2.0 (very random). Defaults to the model's default.
+</ParamField>
+
+```python
+agent = define_agent(
+    name="CreativeWriter",
+    temperature=1.5,  # More creative
+)
+
+agent = define_agent(
+    name="DataAnalyst",
+    temperature=0.2,  # More focused
+)
+```
+
+### reasoning_effort
+
+<ParamField path="reasoning_effort" type="string">
+  Controls how much reasoning the model applies. Only for o-series models (o1, o3, o4-mini) and gpt-5+ (gpt-5.1, gpt-5.2).
+</ParamField>
+
+**Valid values:** `"none"`, `"minimal"`, `"low"`, `"medium"`, `"high"`, `"xhigh"`
+
+```python
+agent = define_agent(
+    name="Analyst",
+    model="o3",
+    reasoning_effort="high",
+)
+```
+
+LiteLLM automatically translates `reasoning_effort` to each provider's equivalent parameter.
+
+<Note>
+  Only set `reasoning_effort` for reasoning models. It has no effect on standard models like `gpt-4o` or `claude-sonnet-4-5`.
+</Note>
+
+## Agent lifecycle
+
+When you call `define_agent()`:
+
+1. **Model resolution** — The model string is parsed and resolved to either a native OpenAI model or a `LitellmModel` instance
+2. **Tool registration** — All specified tools are validated and attached to the agent
+3. **SDK agent creation** — An underlying `Agent` instance from the OpenAI Agents SDK is created
+4. **Registry registration** — The agent is registered in the global `AgentRegistry` with metadata about its configuration
+
+The registry enables:
+- **Studio discovery** — The Klisk Studio UI automatically detects and displays your agent
+- **CLI access** — Commands like `klisk run` and `klisk check` can reference your agent
+- **Hot reload** — Changes to your code update the Studio in real-time
+
+## Source file tracking
+
+`define_agent()` automatically captures the source file where it's called using `inspect.stack()`. This metadata is used by:
+
+- **Studio** — Shows which file defines each agent
+- **Hot reload** — Watches the correct files for changes
+- **Error messages** — Provides accurate file locations in diagnostics
+
+```python
+# src/main.py
+from klisk import define_agent
+
+agent = define_agent(name="Assistant")  # Tracked as src/main.py:4
+```
+
+## Complete example
+
+```python
+from klisk import define_agent, get_tools
+
+# Main assistant with custom tools
+assistant = define_agent(
+    name="Assistant",
+    instructions="""You are a helpful assistant that can search the web,
+    analyze data, and help with coding tasks.""",
+    model="gpt-5.2",
+    temperature=0.7,
+    tools=get_tools("search", "analyze", "format_code"),
+    builtin_tools=["web_search"],
+)
+
+# Specialized reasoning agent
+analyst = define_agent(
+    name="DataAnalyst",
+    instructions="Analyze data and provide insights.",
+    model="o3",
+    reasoning_effort="high",
+    temperature=0.3,
+    tools=get_tools("load_csv", "plot_graph"),
+)
+
+# Multi-provider agent using Anthropic
+researcher = define_agent(
+    name="Researcher",
+    instructions="Research topics and summarize findings.",
+    model="anthropic/claude-sonnet-4-5-20250929",
+    tools=get_tools("search", "summarize"),
+)
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/concepts/tools">
+    Learn how to create custom tools for your agents
+  </Card>
+  <Card title="Models" icon="brain" href="/concepts/models">
+    Explore multi-provider support and model configuration
+  </Card>
+</CardGroup>

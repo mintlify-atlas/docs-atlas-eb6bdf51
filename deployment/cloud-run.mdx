@@ -1,0 +1,479 @@
+---
+title: Deploy to Cloud Run
+description: Deploy your Klisk agent to Google Cloud Run with a single command
+---
+
+## Overview
+
+Klisk provides one-command deployment to Google Cloud Run:
+
+```bash
+klisk deploy init    # Generate Dockerfile and config
+klisk deploy         # Deploy to Cloud Run
+```
+
+This creates a production-ready deployment with:
+- Automatic container builds
+- HTTPS endpoints
+- Auto-scaling
+- Zero-downtime deployments
+- Environment variable management
+
+<Info>
+Google Cloud offers **$300 in free credits** for new accounts. Cloud Run pricing is pay-per-request with a generous free tier.
+</Info>
+
+## Prerequisites
+
+### 1. Google Cloud CLI
+
+Install the `gcloud` CLI:
+
+<CodeGroup>
+
+```bash macOS
+brew install google-cloud-sdk
+```
+
+```bash Linux
+curl https://sdk.cloud.google.com | bash
+exec -l $SHELL
+```
+
+```bash Windows
+# Download from: https://cloud.google.com/sdk/docs/install
+```
+
+</CodeGroup>
+
+### 2. Authenticate
+
+```bash
+gcloud auth login
+```
+
+This opens a browser for authentication.
+
+### 3. Create or Select a Project
+
+```bash
+# Create a new project
+gcloud projects create my-agent-project
+
+# Set as active project
+gcloud config set project my-agent-project
+```
+
+### 4. Enable Billing
+
+<Warning>
+Cloud Run requires billing to be enabled, even for free tier usage.
+</Warning>
+
+Enable billing at:
+```
+https://console.cloud.google.com/billing?project=YOUR_PROJECT_ID
+```
+
+Klisk will check and prompt you if billing is not enabled.
+
+## Quick Start
+
+### Step 1: Initialize Deployment
+
+From your project directory:
+
+```bash
+klisk deploy init
+```
+
+This generates:
+- `Dockerfile` — Container definition
+- `.dockerignore` — Files to exclude from build
+- `requirements.txt` — Python dependencies
+- `klisk-X.Y.Z.whl` — Klisk wheel for installation
+
+**Output:**
+```
+  Project: my-agent
+  Path:    /path/to/my-agent
+
+  Building klisk wheel...
+  Created klisk-0.1.0-py3-none-any.whl
+  Created Dockerfile
+  Created .dockerignore
+  Created requirements.txt (klisk-0.1.0-py3-none-any.whl)
+
+  Done! Next steps:
+    1. Make sure your .env has real API keys
+    2. Run: klisk deploy
+```
+
+### Step 2: Configure Environment Variables
+
+Ensure your `.env` file has real API keys:
+
+```bash .env
+OPENAI_API_KEY=sk-your-real-key-here
+ANTHROPIC_API_KEY=sk-ant-your-real-key-here
+GEMINI_API_KEY=your-gemini-key
+
+# Optional: API authentication
+KLISK_API_KEY=sk-production-secret-key
+```
+
+<Warning>
+Klisk filters out placeholder values like `sk-your-key-here`, `xxx`, `changeme`, etc. Make sure to use real keys.
+</Warning>
+
+### Step 3: Deploy
+
+```bash
+klisk deploy
+```
+
+Klisk will:
+1. Check prerequisites (gcloud, auth, billing)
+2. Enable required APIs
+3. Grant Cloud Build permissions
+4. Build your container
+5. Deploy to Cloud Run
+
+**Output:**
+```
+  Checking prerequisites...
+
+  Deploying to Cloud Run...
+  Service:  my-agent
+  Project:  my-agent-project
+
+  Running: gcloud run deploy my-agent --source ...
+
+  Building using Dockerfile and deploying container to Cloud Run...
+  ✓ Creating Revision...
+  ✓ Routing traffic...
+  Done.
+
+  Deployed successfully!
+
+  Chat:   https://my-agent-abc123.run.app
+  API:    https://my-agent-abc123.run.app/api/chat
+  Health: https://my-agent-abc123.run.app/health
+
+  Embed widget:
+  <script src="https://my-agent-abc123.run.app/widget.js"></script>
+```
+
+## Configuration Options
+
+### Custom Service Name
+
+```bash
+klisk deploy --service custom-name
+```
+
+Default: slugified project name from `klisk.config.yaml`
+
+### Specific Region
+
+```bash
+klisk deploy --region us-central1
+```
+
+Available regions:
+- `us-central1` (Iowa)
+- `us-east1` (South Carolina)
+- `europe-west1` (Belgium)
+- `asia-northeast1` (Tokyo)
+- [Full list](https://cloud.google.com/run/docs/locations)
+
+### Deploy Specific Project
+
+```bash
+klisk deploy --path ./my-agent
+```
+
+### All Options
+
+```bash
+klisk deploy \
+  --path ./my-agent \
+  --service my-custom-name \
+  --region us-east1 \
+  --project my-gcp-project-id
+```
+
+## Generated Files
+
+### Dockerfile
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY *.whl .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["klisk", "serve", ".", "--port", "8080"]
+```
+
+You can customize this after running `klisk deploy init`.
+
+### .dockerignore
+
+```
+.venv/
+__pycache__/
+*.pyc
+.git/
+.env
+.env.*
+node_modules/
+.mypy_cache/
+.pytest_cache/
+```
+
+Excludes development files from the container build.
+
+### requirements.txt
+
+For standard OpenAI-only projects:
+```
+./klisk-0.1.0-py3-none-any.whl
+```
+
+For projects using LiteLLM providers (Anthropic, Gemini, etc.):
+```
+./klisk-0.1.0-py3-none-any.whl[litellm]
+```
+
+<Info>
+Klisk automatically detects if your project uses non-OpenAI models by scanning for provider prefixes (`anthropic/`, `gemini/`, etc.) and includes the `[litellm]` extra.
+</Info>
+
+## Environment Variables
+
+Klisk automatically transfers environment variables from your `.env` file to Cloud Run.
+
+### How It Works
+
+1. Reads `.env` from your project directory
+2. Filters out placeholders (`sk-your-key-here`, `xxx`, etc.)
+3. Passes valid keys to `gcloud run deploy --set-env-vars`
+
+### Skipped Variables
+
+Klisk will skip and warn about:
+- Empty values
+- Placeholders: `sk-your-key-here`, `your-key-here`, `xxx`, `changeme`, `todo`
+
+**Example:**
+```
+  Skipping placeholder: ANTHROPIC_API_KEY
+```
+
+### Manual Environment Variables
+
+You can also set environment variables directly in the Cloud Console:
+
+1. Go to [Cloud Run Services](https://console.cloud.google.com/run)
+2. Click your service
+3. Click **Edit & Deploy New Revision**
+4. Go to **Variables & Secrets** tab
+5. Add environment variables
+
+## API Permissions
+
+### Required APIs
+
+Klisk automatically enables these APIs:
+
+- `run.googleapis.com` — Cloud Run
+- `cloudbuild.googleapis.com` — Container builds
+- `artifactregistry.googleapis.com` — Container registry
+
+### Service Account Permissions
+
+Klisk grants the default compute service account these roles:
+
+- `roles/storage.objectAdmin` — Access build artifacts
+- `roles/logging.logWriter` — Write logs
+- `roles/artifactregistry.writer` — Push containers
+
+<Note>
+These permissions are required for Cloud Build to push your container and are automatically configured on first deploy.
+</Note>
+
+## Updating Your Deployment
+
+To deploy changes:
+
+```bash
+# 1. Update your code
+# 2. Rebuild deployment files (if dependencies changed)
+klisk deploy init
+
+# 3. Deploy
+klisk deploy
+```
+
+Cloud Run performs zero-downtime deployments:
+- New revision is built
+- Traffic gradually shifts to new revision
+- Old revision is kept for rollback
+
+## Monitoring and Logs
+
+### View Logs
+
+```bash
+gcloud run services logs read my-agent --project my-agent-project
+```
+
+Or in the Cloud Console:
+```
+https://console.cloud.google.com/run
+```
+
+### Metrics
+
+View request count, latency, and errors:
+```
+https://console.cloud.google.com/run/detail/REGION/SERVICE/metrics
+```
+
+### Health Checks
+
+Use the `/health` endpoint:
+```bash
+curl https://my-agent-abc123.run.app/health
+```
+
+## Troubleshooting
+
+### Deployment Failed
+
+**Error:** `Permission denied` or `API not enabled`
+
+**Solution:** Re-run the deployment. Permission propagation can take a few seconds:
+```bash
+klisk deploy
+```
+
+### Build Timeout
+
+**Error:** `Deployment timed out after 10 minutes`
+
+**Solution:** Check build status:
+```bash
+gcloud builds list --project my-agent-project
+```
+
+Or in the console:
+```
+https://console.cloud.google.com/cloud-build/builds
+```
+
+### Environment Variables Not Working
+
+**Issue:** Agent fails with "API key not found"
+
+**Solution:** Verify environment variables are set:
+```bash
+gcloud run services describe my-agent \
+  --region REGION \
+  --format "value(spec.template.spec.containers[0].env)"
+```
+
+Or check the Cloud Run service configuration in the console.
+
+### No Real API Keys Warning
+
+```
+  Warning: .env file found but contains no real API keys.
+  Make sure to set real keys before deploying.
+```
+
+Klisk detected placeholder values. Update your `.env` with real keys:
+
+```bash .env
+OPENAI_API_KEY=sk-proj-your-real-key-here  # Not a placeholder
+```
+
+## Cost Optimization
+
+Cloud Run pricing is based on:
+- **Requests**: Free tier includes 2M requests/month
+- **Compute time**: Free tier includes 360,000 GiB-seconds/month
+- **CPU allocation**: Pay only while processing requests (default)
+
+<Tip>
+For low-traffic agents, you'll likely stay within the free tier indefinitely.
+</Tip>
+
+### Minimum Instances
+
+Keep at least one instance warm to reduce cold starts:
+
+```bash
+gcloud run services update my-agent \
+  --min-instances 1 \
+  --region us-central1
+```
+
+<Warning>
+Setting `--min-instances` keeps at least one container running 24/7, which incurs costs outside the free tier.
+</Warning>
+
+### Maximum Instances
+
+Limit concurrent instances to control costs:
+
+```bash
+gcloud run services update my-agent \
+  --max-instances 10 \
+  --region us-central1
+```
+
+## Custom Domains
+
+Map a custom domain to your Cloud Run service:
+
+```bash
+gcloud run domain-mappings create \
+  --service my-agent \
+  --domain chat.example.com \
+  --region us-central1
+```
+
+Then add the DNS records shown in the output.
+
+## Rollback
+
+Rollback to a previous revision:
+
+```bash
+# List revisions
+gcloud run revisions list --service my-agent
+
+# Rollback to specific revision
+gcloud run services update-traffic my-agent \
+  --to-revisions my-agent-00002-abc=100
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="REST API" icon="code" href="/deployment/rest-api">
+    Integrate your deployed agent via HTTP
+  </Card>
+  <Card title="Production Server" icon="server" href="/deployment/production-server">
+    Learn about klisk serve features
+  </Card>
+</CardGroup>

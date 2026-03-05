@@ -1,80 +1,314 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Build your first AI agent in 5 minutes
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through creating your first Klisk agent from scratch. You'll learn how to scaffold a project, define an agent, create custom tools, and run your agent.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Before starting, make sure you have [installed Klisk](/installation) and have an OpenAI API key ready.
 </Note>
+
+## Create Your First Project
+
+<Steps>
+  <Step title="Create a new project">
+    Use the `klisk create` command to scaffold a new agent project:
+
+    ```bash
+    klisk create my-agent
+    cd my-agent
+    ```
+
+    This creates a ready-to-run project with the following structure:
+
+    ```
+    my-agent/
+    ├── klisk.config.yaml    # Project configuration
+    ├── .env                 # API keys and environment variables
+    └── src/
+        ├── main.py          # Agent definition
+        └── tools/           # Custom tools directory
+            ├── __init__.py
+            └── example.py   # Example tool
+    ```
+  </Step>
+
+  <Step title="Configure your API key">
+    Open the `.env` file and add your OpenAI API key:
+
+    ```bash .env
+    OPENAI_API_KEY=sk-your-key-here
+
+    # Uncomment and fill in the API key for your chosen provider:
+    # ANTHROPIC_API_KEY=sk-ant-your-key-here
+    # GEMINI_API_KEY=your-key-here
+    # MISTRAL_API_KEY=your-key-here
+    ```
+
+    <Warning>
+    Never commit your `.env` file to version control. It's already included in `.gitignore`.
+    </Warning>
+  </Step>
+
+  <Step title="Understand the project configuration">
+    The `klisk.config.yaml` file defines your project settings:
+
+    ```yaml klisk.config.yaml
+    entry: src/main.py
+    name: "my-agent"
+    studio:
+      port: 3000
+    api:
+      port: 8000
+    ```
+
+    - `entry` — Path to your main agent file
+    - `name` — Project name
+    - `studio.port` — Port for the development Studio
+    - `api.port` — Port for the production API server
+  </Step>
+</Steps>
+
+## Define Your Agent
+
+Your agent is defined in `src/main.py`. Let's examine the default agent:
+
+```python src/main.py
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Assistant",
+    instructions="You are a helpful assistant. Use the tools available to help the user.",
+    # Use "provider/model" for non-OpenAI models (e.g. "anthropic/claude-3-5-sonnet-20240620")
+    model="gpt-5.2",
+    tools=get_tools("greet"),
+    # builtin_tools=["web_search"],  # Enable web search (OpenAI models only)
+)
+```
+
+### Agent Parameters
+
+- `name` — Display name for your agent
+- `instructions` — System prompt that defines the agent's behavior
+- `model` — LLM model to use (supports OpenAI and LiteLLM provider format)
+- `tools` — List of custom tools to enable
+- `builtin_tools` — Provider-hosted tools like web search (OpenAI only)
+- `temperature` — Controls randomness (0.0 to 2.0, optional)
+- `reasoning_effort` — For reasoning models like o3 (optional)
+
+<Tip>
+You can define multiple agents in the same project. Each call to `define_agent()` registers a new agent that will appear in the Studio.
+</Tip>
+
+## Create Custom Tools
+
+Tools are functions that your agent can call. Let's look at the example tool in `src/tools/example.py`:
+
+```python src/tools/example.py
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet someone by name."""
+    return f"Hello, {name}! How can I help you today?"
+```
+
+### How Tools Work
+
+1. **Decorator** — The `@tool` decorator registers your function and automatically generates a JSON schema from type hints
+2. **Docstring** — The function's docstring becomes the tool description that the LLM sees
+3. **Type hints** — Required for all parameters and return values. The LLM uses these to understand the tool's interface
+4. **Async** — Tools should be async functions (use `async def`)
+
+### Create a New Tool
+
+Let's create a tool that searches for information. Create `src/tools/search.py`:
+
+```python src/tools/search.py
+from klisk import tool
+import httpx
+
+@tool
+async def search_documentation(query: str) -> str:
+    """Search the documentation for information about a topic.
+    
+    Args:
+        query: The search query or topic to look up
+    """
+    # This is a simple example - replace with real search logic
+    return f"Found documentation about: {query}"
+
+@tool
+async def get_weather(city: str) -> str:
+    """Get the current weather for a city.
+    
+    Args:
+        city: The name of the city
+    """
+    # Example implementation - replace with real weather API
+    return f"The weather in {city} is sunny and 72°F"
+```
+
+### Register Tools with Your Agent
+
+Update `src/main.py` to use your new tools:
+
+```python src/main.py
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Assistant",
+    instructions="You are a helpful assistant. Use the tools available to help the user.",
+    model="gpt-5.2",
+    tools=get_tools("greet", "search_documentation", "get_weather"),
+)
+```
+
+<Note>
+The `get_tools()` function looks up tools by their function name. Make sure your tools are imported before calling `define_agent()`. Klisk automatically imports all Python files in `src/tools/`.
+</Note>
+
+## Run Your Agent
+
+There are several ways to interact with your agent:
+
+### CLI (One-off commands)
+
+Run a single command and get a response:
+
+```bash
+klisk run "Say hello to Juan"
+```
+
+The agent will use the `greet` tool and respond:
+
+```
+Hello, Juan! How can I help you today?
+```
+
+### Interactive Chat Mode
+
+Start an interactive chat session:
+
+```bash
+klisk run -i
+```
+
+This opens a chat interface in your terminal where you can have a conversation with your agent.
+
+### Development Studio
+
+Launch the visual development environment:
+
+```bash
+klisk dev
+```
+
+This opens a browser-based Studio at `http://localhost:3000` with:
+
+<CardGroup cols={2}>
+  <Card title="Agent Graph" icon="diagram-project">
+    Visual representation of your agents and their connected tools
+  </Card>
+  <Card title="Live Chat" icon="comments">
+    Test your agent with file attachments and see tool calls in real-time
+  </Card>
+  <Card title="Inline Editing" icon="pen-to-square">
+    Modify agent configuration directly from the UI
+  </Card>
+  <Card title="Hot Reload" icon="arrows-rotate">
+    Code changes update instantly without restarting
+  </Card>
+</CardGroup>
+
+<Tip>
+The Studio is perfect for rapid iteration. Make changes to your code, save the file, and see updates immediately in the browser.
+</Tip>
+
+## Use Different Models
+
+Klisk supports any LLM provider via LiteLLM. Just prefix the model name:
+
+<CodeGroup>
+```python OpenAI (default)
+define_agent(
+    name="Agent",
+    model="gpt-5.2",
+)
+```
+
+```python Anthropic Claude
+define_agent(
+    name="Agent",
+    model="anthropic/claude-sonnet-4-5-20250929",
+)
+```
+
+```python Google Gemini
+define_agent(
+    name="Agent",
+    model="gemini/gemini-2.5-flash",
+)
+```
+
+```python Mistral
+define_agent(
+    name="Agent",
+    model="mistral/mistral-large-latest",
+)
+```
+</CodeGroup>
+
+Don't forget to add the corresponding API key to your `.env` file:
+
+```bash .env
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+GEMINI_API_KEY=your-key-here
+MISTRAL_API_KEY=your-key-here
+```
+
+## Enable Builtin Tools
+
+OpenAI models support provider-hosted tools like web search:
+
+```python src/main.py
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Researcher",
+    instructions="You are a research assistant. Search the web for accurate information.",
+    model="gpt-5.2",
+    tools=get_tools("greet"),
+    builtin_tools=["web_search", "code_interpreter"],
+)
+```
+
+Available builtin tools:
+- `web_search` — Search the web for information
+- `code_interpreter` — Execute Python code in a sandboxed environment
+- `image_generation` — Generate images from text descriptions
+- `file_search` — Search uploaded files (requires `FileSearch` configuration)
+
+<Warning>
+Builtin tools only work with OpenAI models. If you use Anthropic, Google, or other providers, you'll need to implement these capabilities as custom tools.
+</Warning>
+
+## Next Steps
+
+Congratulations! You've created your first Klisk agent. Here's what to explore next:
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="book" href="/concepts/agents">
+    Learn about agents, tools, and how they work together
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/create">
+    Explore all available CLI commands
+  </Card>
+  <Card title="Deploy to Production" icon="rocket" href="/deployment/cloud-run">
+    Learn how to deploy your agent to Google Cloud Run
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/define-agent">
+    Detailed API documentation for all functions
+  </Card>
+</CardGroup>

@@ -1,0 +1,303 @@
+---
+title: Production Server
+description: Deploy your agent with a chat UI and API using klisk serve
+---
+
+## Overview
+
+The `klisk serve` command starts a production server that provides:
+
+- **Chat UI** at the root URL
+- **REST API** at `/api/chat` with SSE streaming
+- **WebSocket endpoint** at `/ws/chat`
+- **Embeddable widget** via `/widget.js`
+- **Health check** at `/health`
+- **API key authentication** (optional)
+
+<Info>
+The production server is optimized for deployment with no file watcher or Studio overhead.
+</Info>
+
+## Starting the Server
+
+### Basic Usage
+
+```bash
+klisk serve
+```
+
+Starts the server on port 8080 (or `$PORT` if set):
+
+```
+  Chat UI: http://0.0.0.0:8080
+  API:     http://0.0.0.0:8080/api/chat
+  Health:  http://0.0.0.0:8080/health
+  Project: /path/to/your-agent
+```
+
+### Custom Port and Host
+
+```bash
+klisk serve --port 3000 --host 127.0.0.1
+```
+
+<CodeGroup>
+
+```bash Using environment variable
+export PORT=3000
+klisk serve
+```
+
+```bash Command line options
+klisk serve --port 3000 --host 0.0.0.0
+```
+
+</CodeGroup>
+
+### Serve Specific Project
+
+```bash
+klisk serve my-agent
+```
+
+## Chat UI
+
+The production server serves a built-in chat interface at the root URL:
+
+```
+http://localhost:8080
+```
+
+**Features:**
+- Clean, responsive interface
+- Markdown rendering
+- Tool call inspection
+- File attachments (images, PDFs)
+- Real-time streaming
+- Conversation history
+
+## API Key Authentication
+
+Protect your agent with API keys by setting environment variables:
+
+```bash .env
+KLISK_API_KEY=sk-your-secret-key-here
+```
+
+<Tip>
+You can set multiple keys by separating them with commas:
+```bash
+KLISK_API_KEY=sk-key-1,sk-key-2,sk-key-3
+```
+</Tip>
+
+### Supported Environment Variables
+
+<ParamField path="KLISK_API_KEY" type="string">
+  Main API key for all endpoints
+</ParamField>
+
+<ParamField path="KLISK_CHAT_KEY" type="string">
+  Alternative key specifically for chat endpoints
+</ParamField>
+
+<ParamField path="KLISK_WIDGET_KEY" type="string">
+  Alternative key specifically for widget authentication
+</ParamField>
+
+See [REST API Authentication](/deployment/rest-api#authentication) for usage details.
+
+## Health Check
+
+The `/health` endpoint returns a simple status response:
+
+```bash
+curl http://localhost:8080/health
+```
+
+```json
+{
+  "status": "ok"
+}
+```
+
+Use this for:
+- Container health checks
+- Load balancer probes
+- Uptime monitoring
+
+## Widget Embedding
+
+Embed your agent as a chat widget on any website:
+
+```html
+<script src="http://localhost:8080/widget.js"></script>
+```
+
+### Customization
+
+Configure the widget appearance with data attributes:
+
+```html
+<script 
+  src="https://your-agent.run.app/widget.js"
+  data-position="bottom-right"
+  data-color="#2563eb"
+  data-width="380px"
+  data-height="560px"
+  data-key="your-api-key-here"
+></script>
+```
+
+<ParamField path="data-position" type="string" default="bottom-right">
+  Widget position: `bottom-right` or `bottom-left`
+</ParamField>
+
+<ParamField path="data-color" type="string" default="#2563eb">
+  Button background color (hex or CSS color)
+</ParamField>
+
+<ParamField path="data-width" type="string" default="380px">
+  Chat panel width
+</ParamField>
+
+<ParamField path="data-height" type="string" default="560px">
+  Chat panel height
+</ParamField>
+
+<ParamField path="data-key" type="string">
+  API key for authentication (if enabled)
+</ParamField>
+
+### Example: Custom Styled Widget
+
+```html
+<!-- Dark purple widget on the left -->
+<script 
+  src="https://your-agent.run.app/widget.js"
+  data-position="bottom-left"
+  data-color="#7c3aed"
+  data-width="420px"
+  data-height="600px"
+></script>
+```
+
+## Environment Variables
+
+The server loads `.env` from your project directory:
+
+```bash .env
+# Model provider API keys
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=...
+
+# Server configuration
+PORT=8080
+
+# Optional: API authentication
+KLISK_API_KEY=sk-your-secret-key
+```
+
+<Warning>
+Never commit `.env` files to version control. Add `.env` to your `.gitignore`.
+</Warning>
+
+## Production Deployment
+
+### Docker
+
+Create a `Dockerfile`:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["klisk", "serve", ".", "--port", "8080"]
+```
+
+Build and run:
+
+```bash
+docker build -t my-agent .
+docker run -p 8080:8080 --env-file .env my-agent
+```
+
+### Cloud Run
+
+See the [Cloud Run deployment guide](/deployment/cloud-run) for one-command deployment to Google Cloud.
+
+## Server Architecture
+
+The production server (`src/klisk/server/production.py:40-141`):
+
+1. Loads your project configuration
+2. Discovers all agents and tools
+3. Creates a FastAPI app with CORS enabled
+4. Serves the chat UI static files
+5. Exposes API endpoints
+6. Runs with Uvicorn
+
+<Note>
+Unlike `klisk dev`, the production server does **not** include:
+- File watching / hot reload
+- Studio UI
+- Agent editing endpoints
+
+This reduces resource usage and attack surface for production deployments.
+</Note>
+
+## Troubleshooting
+
+### Port Already in Use
+
+```bash
+klisk serve --port 8081
+```
+
+Or kill the process using the port:
+
+```bash
+lsof -ti:8080 | xargs kill -9
+```
+
+### API Keys Not Working
+
+Ensure your `.env` file is in the project directory:
+
+```bash
+ls -la .env
+cat .env  # Verify KLISK_API_KEY is set
+```
+
+### No Agents Loaded
+
+Run `klisk check` to validate your project:
+
+```bash
+klisk check
+```
+
+Common issues:
+- Missing `klisk.config.yaml`
+- Agent definition errors
+- Tool import failures
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="REST API" icon="code" href="/deployment/rest-api">
+    Integrate your agent via HTTP
+  </Card>
+  <Card title="Deploy to Cloud Run" icon="cloud" href="/deployment/cloud-run">
+    One-command deployment to production
+  </Card>
+</CardGroup>

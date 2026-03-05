@@ -1,0 +1,195 @@
+---
+title: Introduction
+description: The easiest way to build AI agents in Python
+---
+
+Klisk is a framework for building AI agents programmatically. Define agents and tools with a simple API, iterate with an interactive Studio, and deploy to production — all from the CLI.
+
+## What is Klisk?
+
+Klisk provides a complete development workflow for AI agents:
+
+<CardGroup cols={2}>
+  <Card title="Define Programmatically" icon="code">
+    Build agents and tools using a clean Python API built on top of the OpenAI Agents SDK
+  </Card>
+  <Card title="Interactive Studio" icon="flask">
+    Test and debug your agents in a visual browser-based development environment with hot reload
+  </Card>
+  <Card title="Multi-Provider Support" icon="globe">
+    Use any LLM provider via LiteLLM — OpenAI, Anthropic, Google, Mistral, and more
+  </Card>
+  <Card title="One-Command Deploy" icon="rocket">
+    Deploy to Google Cloud Run with a single CLI command
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Simple Agent Definition
+
+Define agents with a declarative API that handles all the complexity:
+
+```python
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Assistant",
+    instructions="You are a helpful assistant.",
+    model="gpt-5.2",
+    tools=get_tools("greet"),
+)
+```
+
+### Custom Tools
+
+Create tools using a simple decorator pattern. Klisk automatically extracts type hints and docstrings to generate tool schemas:
+
+```python
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet someone by name."""
+    return f"Hello, {name}!"
+```
+
+### Visual Development Studio
+
+Launch an interactive development environment that opens in your browser:
+
+```bash
+klisk dev my-agent
+```
+
+The Studio provides:
+- **Agent graph** — visualize agents and their connected tools
+- **Live chat** — test your agent with file attachments and tool call inspection
+- **Inline editing** — modify agent configuration directly from the UI
+- **Hot reload** — code changes update instantly without restarting
+
+### Multi-Provider LLM Support
+
+Use any LLM provider via LiteLLM integration. Just prefix the model name:
+
+```python
+# OpenAI (default)
+define_agent(name="Agent", model="gpt-5.2")
+
+# Anthropic
+define_agent(name="Agent", model="anthropic/claude-sonnet-4-5-20250929")
+
+# Google
+define_agent(name="Agent", model="gemini/gemini-2.5-flash")
+
+# Mistral
+define_agent(name="Agent", model="mistral/mistral-large-latest")
+```
+
+Set the corresponding API key in your `.env` file (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, etc.).
+
+### Builtin Tools
+
+OpenAI models support provider-hosted tools out of the box:
+
+```python
+define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    builtin_tools=["web_search", "code_interpreter"],
+)
+```
+
+Available builtin tools:
+- `web_search` — Search the web for information
+- `code_interpreter` — Execute Python code in a sandboxed environment
+- `file_search` — Search uploaded files using vector embeddings
+- `image_generation` — Generate images from text descriptions
+
+<Note>
+Builtin tools are only supported with OpenAI models. If you use a non-OpenAI model, these tools will be automatically disabled with a warning.
+</Note>
+
+### Reasoning Models
+
+Configure reasoning effort for o-series and gpt-5+ models:
+
+```python
+define_agent(
+    name="Analyst",
+    model="o3",
+    reasoning_effort="high",
+)
+```
+
+Supported reasoning effort levels: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`.
+
+### Production Server
+
+Serve your agent with a chat UI and REST API:
+
+```bash
+klisk serve my-agent
+```
+
+This starts a production server with:
+- Chat UI at `http://localhost:8080`
+- REST API at `/api/chat` (streaming supported)
+- WebSocket endpoint at `/ws/chat`
+- Embeddable widget via `/widget.js`
+- Optional API key authentication via `KLISK_API_KEY` environment variable
+
+### One-Command Deployment
+
+Deploy to Google Cloud Run in one command:
+
+```bash
+klisk deploy init    # Generate Dockerfile and config
+klisk deploy         # Deploy to Cloud Run
+```
+
+## Why Klisk?
+
+<AccordionGroup>
+  <Accordion title="Focus on your agent logic, not infrastructure">
+    Klisk handles all the boilerplate — project scaffolding, hot reload, serving, deployment. You just write agent logic.
+  </Accordion>
+  
+  <Accordion title="Iterate faster with visual tooling">
+    The interactive Studio lets you test and debug agents visually without writing test scripts or restarting servers.
+  </Accordion>
+  
+  <Accordion title="Use any LLM provider">
+    Built on LiteLLM, Klisk supports OpenAI, Anthropic, Google, Mistral, and dozens of other providers with a unified API.
+  </Accordion>
+  
+  <Accordion title="Production-ready from day one">
+    Built-in production server and one-command deployment mean you can go from prototype to production in minutes.
+  </Accordion>
+</AccordionGroup>
+
+## Architecture
+
+Klisk is built on top of the [OpenAI Agents SDK](https://github.com/openai/agent-sdk) and uses:
+- **LiteLLM** for multi-provider LLM support
+- **FastAPI** for the production server
+- **WebSockets** for real-time chat streaming
+- **Watchfiles** for hot reload in development
+
+Your project structure is simple and follows Python best practices:
+
+```
+my-agent/
+├── klisk.config.yaml    # Project configuration
+├── .env                 # API keys and environment variables
+└── src/
+    ├── main.py          # Agent definition
+    └── tools/           # Custom tools
+        └── example.py
+```
+
+## Getting Started
+
+Ready to build your first agent? Check out the [Quickstart](/quickstart) guide.
+
+For detailed installation instructions, see [Installation](/installation).

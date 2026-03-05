@@ -1,0 +1,132 @@
+---
+title: "ImageGeneration"
+description: "Image generation builtin tool for OpenAI models"
+---
+
+## Overview
+
+The `ImageGeneration` class provides image generation capabilities for agents. This builtin tool is only supported with OpenAI models and allows agents to generate images based on text descriptions.
+
+## Class Definition
+
+```python
+from klisk.core.builtin_tools import ImageGeneration
+```
+
+Defined in: `src/klisk/core/builtin_tools.py:35`
+
+## Parameters
+
+<ParamField path="model" type="str" default="gpt-image-1">
+  The model to use for image generation. Default is `"gpt-image-1"`.
+</ParamField>
+
+<ParamField path="quality" type="Literal['auto', 'low', 'medium', 'high']" default="auto">
+  Quality setting for generated images. Options:
+  - `"auto"` - Automatic quality selection (default)
+  - `"low"` - Lower quality, faster generation
+  - `"medium"` - Balanced quality and speed
+  - `"high"` - Highest quality, slower generation
+</ParamField>
+
+<ParamField path="size" type="Literal['auto', '1024x1024', '1536x1024', '1024x1536']" default="auto">
+  Size of the generated image. Options:
+  - `"auto"` - Automatic size selection (default)
+  - `"1024x1024"` - Square image (1:1 aspect ratio)
+  - `"1536x1024"` - Landscape image (3:2 aspect ratio)
+  - `"1024x1536"` - Portrait image (2:3 aspect ratio)
+</ParamField>
+
+## Usage
+
+### Basic Usage (String Shortcut)
+
+```python
+from klisk import define_agent
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=["image_generation"],
+)
+```
+
+### Object Form with Custom Configuration
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import ImageGeneration
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        ImageGeneration(
+            quality="high",
+            size="1024x1024"
+        )
+    ],
+)
+```
+
+### High Quality Portrait Images
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import ImageGeneration
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        ImageGeneration(
+            model="gpt-image-1",
+            quality="high",
+            size="1024x1536"
+        )
+    ],
+)
+```
+
+### Multiple Builtin Tools
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import ImageGeneration
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        "web_search",
+        ImageGeneration(quality="medium", size="1536x1024"),
+    ],
+)
+```
+
+### Custom Model
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import ImageGeneration
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        ImageGeneration(
+            model="gpt-image-1",
+            quality="auto",
+            size="auto"
+        )
+    ],
+)
+```
+
+## Important Notes
+
+<Warning>
+  The `ImageGeneration` tool is only supported with OpenAI models. Using it with non-OpenAI models will raise a `ValueError`.
+</Warning>
+
+<Info>
+  When using the string shortcut `"image_generation"`, the default settings are used:
+  - `model="gpt-image-1"`
+  - `quality="auto"`
+  - `size="auto"`
+</Info>

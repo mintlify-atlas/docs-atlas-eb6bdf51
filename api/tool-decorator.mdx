@@ -1,0 +1,188 @@
+---
+title: "@tool"
+description: "Decorator for defining custom agent tools"
+---
+
+## Overview
+
+Decorator that wraps the OpenAI Agents SDK `@function_tool` and registers the tool in the global `AgentRegistry`. This allows tools defined in separate files to be discovered by the Studio and CLI, and retrieved using `get_tools()`.
+
+## Signature
+
+```python
+def tool(func: Callable | None = None, **kwargs: Any) -> Any
+```
+
+## Usage
+
+The `@tool` decorator can be used with or without parentheses:
+
+### Without parentheses (simple case)
+
+```python
+from klisk import tool
+
+@tool
+async def my_function(param: str) -> str:
+    """Function description."""
+    return f"Result: {param}"
+```
+
+### With parentheses (custom configuration)
+
+```python
+from klisk import tool
+
+@tool(name_override="custom_name")
+async def my_function(param: str) -> str:
+    """Function description."""
+    return f"Result: {param}"
+```
+
+## Parameters
+
+<ParamField path="func" type="Callable | None" default="None">
+  The function to decorate. When using `@tool` without parentheses, this is automatically provided. When using `@tool()` with parentheses, this is `None` initially.
+</ParamField>
+
+<ParamField path="**kwargs" type="Any">
+  Additional keyword arguments passed to the underlying `@function_tool` decorator from the OpenAI Agents SDK. 
+  
+  Common options include:
+  - `name_override` - Override the tool's name (defaults to function name)
+  - `description_override` - Override the tool's description (defaults to docstring)
+</ParamField>
+
+## Returns
+
+<ResponseField name="tool" type="FunctionTool">
+  A `FunctionTool` instance from the OpenAI Agents SDK that is also registered in the global `AgentRegistry`.
+</ResponseField>
+
+## Examples
+
+### Basic tool definition
+
+```python
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet a user by name."""
+    return f"Hello, {name}!"
+```
+
+### Tool with type hints
+
+```python
+from klisk import tool
+
+@tool
+async def calculate(a: int, b: int, operation: str) -> int:
+    """Perform a mathematical operation on two numbers.
+    
+    Args:
+        a: First number
+        b: Second number
+        operation: Operation to perform (add, subtract, multiply, divide)
+    """
+    if operation == "add":
+        return a + b
+    elif operation == "subtract":
+        return a - b
+    elif operation == "multiply":
+        return a * b
+    elif operation == "divide":
+        return a // b
+    else:
+        raise ValueError(f"Unknown operation: {operation}")
+```
+
+### Tool with custom name
+
+```python
+from klisk import tool
+
+@tool(name_override="web_search")
+async def search_web(query: str) -> str:
+    """Search the web for information."""
+    # Implementation here
+    return f"Search results for: {query}"
+```
+
+### Synchronous tool
+
+```python
+from klisk import tool
+
+@tool
+def get_current_time() -> str:
+    """Get the current time."""
+    from datetime import datetime
+    return datetime.now().isoformat()
+```
+
+### Tool with complex parameters
+
+```python
+from klisk import tool
+from typing import Literal
+
+@tool
+async def search(
+    query: str,
+    category: Literal["web", "images", "news"] = "web",
+    max_results: int = 10,
+) -> str:
+    """Search for information with filters.
+    
+    Args:
+        query: The search query
+        category: Type of search to perform
+        max_results: Maximum number of results to return
+    """
+    return f"Searching {category} for '{query}' (max {max_results} results)"
+```
+
+## Organizing tools in separate files
+
+Define tools in a `tools/` directory:
+
+```python
+# tools/search.py
+from klisk import tool
+
+@tool
+async def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+```
+
+```python
+# tools/greet.py
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet a user."""
+    return f"Hello, {name}!"
+```
+
+Then reference them in your main agent file:
+
+```python
+# main.py
+from klisk import define_agent, get_tools
+import tools.search
+import tools.greet
+
+agent = define_agent(
+    name="Assistant",
+    tools=get_tools("search", "greet"),
+)
+```
+
+## See Also
+
+- [define_agent()](/api/define-agent) - Create agents that use tools
+- [get_tools()](/api/get-tools) - Retrieve registered tools by name

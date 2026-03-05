@@ -1,0 +1,236 @@
+---
+title: klisk list
+description: Display all Klisk projects in your workspace
+---
+
+## Usage
+
+```bash
+klisk list
+```
+
+## Description
+
+Lists all Klisk projects in your workspace directory (`~/klisk/`). Shows key information about each project including model, entry point, and path.
+
+## Output Format
+
+For each project, displays:
+- **Name** - Project name from `klisk.config.yaml`
+- **Model** - Default model configured for the project
+- **Entry** - Entry point file (usually `main.py`)
+- **Path** - Full filesystem path to the project
+
+## Examples
+
+### With Projects
+
+```bash
+klisk list
+```
+
+Output:
+```
+Projects (3):
+
+  customer-support
+    Model: gpt-5.2  |  Entry: main.py
+    Path:  ~/klisk/customer-support
+
+  email-classifier
+    Model: gpt-4o  |  Entry: main.py
+    Path:  ~/klisk/email-classifier
+
+  data-analyst
+    Model: anthropic/claude-3-5-sonnet  |  Entry: agent.py
+    Path:  ~/klisk/data-analyst
+```
+
+### No Projects
+
+```bash
+klisk list
+```
+
+Output:
+```
+No projects found in ~/klisk
+
+Create one with:
+  klisk create my-agent
+```
+
+## Use Cases
+
+### Quick Overview
+
+Get a snapshot of all your projects:
+```bash
+klisk list
+```
+
+### Find Project Paths
+
+Locate the filesystem path for a project:
+```bash
+klisk list | grep customer-support
+```
+
+### Verify Project Configuration
+
+Check which models are configured:
+```bash
+klisk list
+```
+
+Review the model column to see each project's default model.
+
+### Before Workspace Mode
+
+Review all projects before starting workspace mode:
+```bash
+klisk list
+klisk dev  # Starts workspace mode with all listed projects
+```
+
+## Project Discovery
+
+The command:
+1. Scans `~/klisk/` for subdirectories
+2. Looks for `klisk.config.yaml` in each directory
+3. Loads configuration to extract:
+   - Project name
+   - Default model
+   - Entry point
+4. Sorts projects alphabetically by name
+
+## What's Included
+
+**Displayed**:
+- Projects with valid `klisk.config.yaml`
+- Projects using default configuration (if no config file)
+
+**Not displayed**:
+- Directories without Klisk projects
+- Hidden directories (starting with `.`)
+- Non-directory files
+
+## Configuration Details
+
+### Model Display
+
+The model shown is from `klisk.config.yaml`:
+
+```yaml
+default_model: gpt-5.2
+```
+
+If not specified, defaults to `gpt-5.2`.
+
+Note: Individual agents can override this with their own model parameters.
+
+### Entry Point Display
+
+The entry point is from `klisk.config.yaml`:
+
+```yaml
+entry: main.py
+```
+
+If not specified, defaults to `main.py`.
+
+## Project Count
+
+The header shows the total number of projects:
+
+```
+Projects (3):  # ← Total count
+```
+
+## Workspace Directory
+
+By default, projects are stored in:
+```
+~/klisk/
+```
+
+This is the standard location for Klisk projects. If you've created projects elsewhere, they won't appear in `klisk list` unless you move them to `~/klisk/`.
+
+## Related Commands
+
+- [`klisk create`](/cli/create) - Create a new project
+- [`klisk dev`](/cli/dev) - Start development server (workspace mode loads all listed projects)
+- [`klisk check`](/cli/check) - Validate a specific project
+- [`klisk run`](/cli/run) - Run an agent from a specific project
+
+## Tips
+
+### Combine with grep
+
+Filter for specific projects:
+```bash
+klisk list | grep gpt-5
+```
+
+### Count Projects
+
+```bash
+klisk list | grep "Model:" | wc -l
+```
+
+### Find Projects by Model
+
+List all projects using Claude:
+```bash
+klisk list | grep anthropic
+```
+
+### Export to File
+
+```bash
+klisk list > my-projects.txt
+```
+
+## Troubleshooting
+
+### No Projects Found
+
+If you get "No projects found" but expect projects:
+
+1. **Check the workspace directory**:
+   ```bash
+   ls ~/klisk/
+   ```
+
+2. **Verify projects have config files**:
+   ```bash
+   ls ~/klisk/*/klisk.config.yaml
+   ```
+
+3. **Create a test project**:
+   ```bash
+   klisk create test-agent
+   klisk list
+   ```
+
+### Incorrect Information
+
+If project details are wrong:
+
+1. **Check the config file**:
+   ```bash
+   cat ~/klisk/PROJECT_NAME/klisk.config.yaml
+   ```
+
+2. **Validate the project**:
+   ```bash
+   klisk check PROJECT_NAME
+   ```
+
+## When to Use
+
+- **Before workspace mode**: See which projects will be loaded
+- **After creating projects**: Verify they were created correctly
+- **Project inventory**: Get an overview of all your agents
+- **Path lookup**: Find where a project is stored
+- **Model audit**: Review which models you're using across projects

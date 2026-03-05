@@ -1,0 +1,471 @@
+---
+title: Configuration
+description: Configuration options, environment variables, and ProjectConfig class
+---
+
+Klisk uses a combination of YAML configuration files and environment variables to manage project settings and credentials.
+
+## Configuration File
+
+### klisk.config.yaml
+
+The root configuration file defines project settings:
+
+```yaml klisk.config.yaml
+entry: src/main.py
+name: "MyAgent"
+studio:
+  port: 3000
+api:
+  port: 8000
+```
+
+## Configuration Schema
+
+### ProjectConfig
+
+Klisk uses Pydantic models to parse and validate configuration:
+
+```python
+# From config.py
+from pydantic import BaseModel
+
+class StudioConfig(BaseModel):
+    port: int = 3000
+
+class ApiConfig(BaseModel):
+    port: int = 8000
+
+class ProjectConfig(BaseModel):
+    entry: str = "src/main.py"
+    name: str = "MyAgent"
+    studio: StudioConfig = StudioConfig()
+    api: ApiConfig = ApiConfig()
+```
+
+<ParamField path="entry" type="string" default="src/main.py">
+  Path to the Python file containing agent definitions (relative to project root)
+</ParamField>
+
+<ParamField path="name" type="string" default="MyAgent">
+  Project display name shown in Studio and CLI output
+</ParamField>
+
+<ParamField path="studio.port" type="number" default={3000}>
+  Port for Studio interface (reserved for future use)
+</ParamField>
+
+<ParamField path="api.port" type="number" default={8000}>
+  Port for development server and API endpoints
+</ParamField>
+
+### Loading Configuration
+
+The `ProjectConfig.load()` method reads and validates configuration:
+
+```python
+# From config.py
+@classmethod
+def load(cls, project_dir: str | Path) -> ProjectConfig:
+    config_path = Path(project_dir) / "klisk.config.yaml"
+    if not config_path.exists():
+        return cls()  # Use defaults
+    with open(config_path) as f:
+        data = yaml.safe_load(f) or {}
+    return cls.model_validate(data)
+```
+
+If `klisk.config.yaml` is missing, Klisk uses default values:
+
+```python
+config = ProjectConfig.load("/path/to/project")
+# config.entry == "src/main.py"
+# config.name == "MyAgent"
+# config.api.port == 8000
+```
+
+## Environment Variables
+
+Store API keys and secrets in a `.env` file at the project root.
+
+### API Keys
+
+Klisk loads environment variables using `python-dotenv`:
+
+```bash .env
+OPENAI_API_KEY=sk-your-key-here
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+GEMINI_API_KEY=your-key-here
+```
+
+These are loaded automatically when you run `klisk dev` or `klisk run`:
+
+```python
+# From dev.py
+from dotenv import load_dotenv
+
+project_path = resolve_project(name_or_path)
+load_dotenv(project_path / ".env")  # Loads .env into os.environ
+```
+
+<Warning>
+  `.env` files should never be committed to version control. Add `.env` to `.gitignore` to prevent accidental exposure.
+</Warning>
+
+### Multi-Provider Support
+
+Klisk uses LiteLLM under the hood, which supports multiple providers. Set the appropriate API key for your chosen model:
+
+<CodeGroup>
+```bash OpenAI
+OPENAI_API_KEY=sk-your-key-here
+```
+
+```bash Anthropic
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+```bash Google Gemini
+GEMINI_API_KEY=your-key-here
+```
+
+```bash Mistral
+MISTRAL_API_KEY=your-key-here
+```
+
+```bash Azure OpenAI
+AZURE_API_KEY=your-key-here
+AZURE_API_BASE=https://your-endpoint.openai.azure.com/
+AZURE_API_VERSION=2024-02-15-preview
+```
+</CodeGroup>
+
+### Custom Environment Variables
+
+You can define custom environment variables for your tools:
+
+```bash .env
+OPENAI_API_KEY=sk-your-key-here
+
+# Custom variables for your tools
+WEATHER_API_KEY=your-weather-key
+DATABASE_URL=postgresql://localhost/mydb
+DEBUG=true
+```
+
+Access them in your tools using `os.environ`:
+
+```python src/tools/weather.py
+import os
+from klisk import tool
+
+@tool
+async def fetch_weather(city: str) -> str:
+    """Get current weather for a city."""
+    api_key = os.environ.get("WEATHER_API_KEY")
+    if not api_key:
+        return "Weather API key not configured"
+    
+    # Call weather API with api_key
+    ...
+```
+
+## Port Configuration
+
+The development server uses the port specified in `klisk.config.yaml`:
+
+```python
+# From dev.py
+config = ProjectConfig.load(project_path)
+
+typer.echo(f"  Studio + API: http://localhost:{config.api.port}")
+typer.echo(f"  Project:      {project_path}")
+typer.echo("  Watching for changes...")
+
+app = create_app(project_path)
+run_server(app, host="0.0.0.0", port=config.api.port)
+```
+
+### Port Conflicts
+
+If the configured port is already in use, Klisk will fail to start:
+
+```bash
+ERROR:    [Errno 48] Address already in use
+```
+
+Change the port in `klisk.config.yaml`:
+
+```yaml
+api:
+  port: 8001  # Use a different port
+```
+
+## Workspace Configuration
+
+In workspace mode (`klisk dev` without arguments), Klisk loads all projects from `~/.klisk/projects/`:
+
+```python
+# From dev.py
+if name_or_path is None:
+    # Workspace mode: load all projects
+    from klisk.core.discovery import load_all_project_envs
+    from klisk.core.paths import PROJECTS_DIR
+
+    load_all_project_envs()  # Load .env from all projects
+
+    port = 8000
+    typer.echo(f"  Studio + API: http://localhost:{port}")
+    typer.echo(f"  Workspace:    {PROJECTS_DIR}")
+    typer.echo("  Watching all projects for changes...")
+
+    app = create_app(None)
+    run_server(app, host="0.0.0.0", port=port)
+```
+
+<Note>
+  In workspace mode, the port defaults to 8000 and cannot be customized per-project. All projects share a single server instance.
+</Note>
+
+## Model Configuration
+
+### Curated Model Lists
+
+The Studio provides curated model lists for common providers:
+
+```python
+# From app.py
+_CURATED_MODELS: dict[str, list[str]] = {
+    "openai": [
+        "gpt-5.2",
+        "gpt-5.2-pro",
+        "gpt-5.1",
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
+        "gpt-5-pro",
+        "gpt-4.1",
+        "gpt-4.1-mini",
+        "gpt-4.1-nano",
+        "o4-mini",
+        "o3",
+        "o3-mini",
+        "o3-pro",
+        "o1",
+        "o1-mini",
+        "o1-pro",
+    ],
+    "anthropic": [
+        "claude-opus-4-6",
+        "claude-opus-4-5",
+        "claude-opus-4-1",
+        "claude-sonnet-4-5",
+        "claude-haiku-4-5",
+    ],
+    "gemini": [
+        "gemini-3-pro-preview",
+        "gemini-3-flash-preview",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+    ],
+}
+```
+
+### Model Filtering
+
+Klisk filters out legacy and non-chat models to keep dropdowns clean:
+
+```python
+# From app.py
+_EXCLUDE_PREFIXES = (
+    "ft:", "gpt-3.5", "gpt-4-", "gpt-4-32k", "chatgpt-",
+    "claude-3-", "claude-4-",
+    "gemini-pro", "gemini-exp-", "gemini-gemma-", "gemma-",
+    "gemini-1.5-", "learnlm-", "gemini-robotics-",
+)
+_EXCLUDE_SUBSTRINGS = (
+    "realtime", "audio", "search-preview", "vision",
+    "deep-research", "container", "-codex", "-chat",
+    "-tts", "-live-", "image-generation",
+    "-exp-", "thinking-exp", "computer-use",
+)
+```
+
+<Tip>
+  You can still use any model supported by LiteLLM by selecting "Custom" in the Studio or specifying it directly in your code.
+</Tip>
+
+## Runtime Configuration
+
+Some settings are determined at runtime and cannot be configured:
+
+### Server Host
+
+The dev server always binds to `0.0.0.0` (all interfaces):
+
+```python
+# From dev.py
+run_server(app, host="0.0.0.0", port=config.api.port)
+```
+
+This allows access from other devices on your network at `http://<your-ip>:8000`.
+
+### WebSocket Endpoints
+
+WebSocket endpoints are fixed:
+
+- `/ws/chat` — agent interactions
+- `/ws/reload` — hot reload notifications
+
+### Static Files
+
+The Studio UI is served from:
+
+1. Installed package: `klisk/studio_dist/` (production)
+2. Development: `studio/dist/` relative to repo root (dev mode)
+
+```python
+# From app.py
+def _find_studio_dist() -> Path | None:
+    import importlib.resources
+    # 1. Inside the installed package
+    pkg_dist = Path(str(importlib.resources.files("klisk"))) / "studio_dist"
+    if pkg_dist.exists():
+        return pkg_dist
+    # 2. Development fallback
+    dev_dist = Path(__file__).resolve().parent.parent.parent.parent / "studio" / "dist"
+    if dev_dist.exists():
+        return dev_dist
+    return None
+```
+
+## Configuration Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use .env for secrets" icon="lock">
+    Never hardcode API keys in configuration or source files
+  </Card>
+  <Card title="Commit klisk.config.yaml" icon="git-alt">
+    Configuration should be versioned and shared with your team
+  </Card>
+  <Card title="Document custom variables" icon="book">
+    Add comments to `.env.example` explaining what each variable does
+  </Card>
+  <Card title="Use descriptive project names" icon="tag">
+    Project names appear in Studio and CLI output—make them clear
+  </Card>
+</CardGroup>
+
+## Environment Precedence
+
+Environment variables are loaded in this order (later overrides earlier):
+
+1. System environment variables (`export OPENAI_API_KEY=...`)
+2. `.env` file in project root
+3. Runtime overrides (e.g., command-line flags)
+
+```python
+# System environment takes precedence
+export OPENAI_API_KEY=sk-system-key
+
+# .env file (ignored if already set)
+OPENAI_API_KEY=sk-dotenv-key
+
+# Final value: sk-system-key
+```
+
+## Configuration Validation
+
+Pydantic validates configuration at load time:
+
+```yaml
+api:
+  port: "not a number"  # ❌ ValidationError: port must be int
+```
+
+```yaml
+api:
+  port: -1  # ✅ Parses successfully (no range validation)
+```
+
+<Note>
+  Klisk does not validate port ranges or check if ports are available. Invalid ports will cause runtime errors when starting the server.
+</Note>
+
+## Debugging Configuration
+
+Use Python to inspect loaded configuration:
+
+```python
+from pathlib import Path
+from klisk.core.config import ProjectConfig
+
+config = ProjectConfig.load(Path.cwd())
+print(config.model_dump_json(indent=2))
+```
+
+Output:
+
+```json
+{
+  "entry": "src/main.py",
+  "name": "MyAgent",
+  "studio": {
+    "port": 3000
+  },
+  "api": {
+    "port": 8000
+  }
+}
+```
+
+## Advanced: Programmatic Configuration
+
+You can load and modify configuration programmatically:
+
+```python
+from pathlib import Path
+from klisk.core.config import ProjectConfig, ApiConfig
+
+# Load existing config
+config = ProjectConfig.load(Path("/path/to/project"))
+
+# Modify settings
+config.api.port = 9000
+config.name = "CustomAgent"
+
+# Save (you need to implement serialization)
+import yaml
+config_path = Path("/path/to/project") / "klisk.config.yaml"
+with open(config_path, "w") as f:
+    yaml.dump(config.model_dump(exclude_defaults=True), f)
+```
+
+## Configuration Schema Reference
+
+<ResponseField name="entry" type="string">
+  Python file path containing agent definitions
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Project display name
+</ResponseField>
+
+<ResponseField name="studio" type="object">
+  <Expandable title="properties">
+    <ResponseField name="port" type="number">
+      Studio UI port (reserved for future use)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="api" type="object">
+  <Expandable title="properties">
+    <ResponseField name="port" type="number">
+      Development server and API port
+    </ResponseField>
+  </Expandable>
+</ResponseField>

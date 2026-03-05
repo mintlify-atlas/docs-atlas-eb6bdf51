@@ -1,0 +1,232 @@
+---
+title: klisk serve
+description: Start the production server with chat UI and API endpoints
+---
+
+## Usage
+
+```bash
+klisk serve [name_or_path] [options]
+```
+
+## Description
+
+Launches the production server with a public-facing chat UI and REST API. Optimized for deployment environments.
+
+## Arguments
+
+<ParamField path="name_or_path" type="string" default=".">
+  Project name or path to serve.
+</ParamField>
+
+## Options
+
+<ParamField path="--port" type="integer">
+  Port to bind the server to. Use `-p` as shorthand.
+  
+  **Default**: Reads from `$PORT` environment variable, falls back to `8080`
+</ParamField>
+
+<ParamField path="--host" type="string" default="0.0.0.0">
+  Host address to bind to. Use `-h` as shorthand.
+  
+  **Default**: `0.0.0.0` (all interfaces)
+</ParamField>
+
+## Server Endpoints
+
+The production server exposes:
+
+### Chat UI
+
+```
+http://localhost:8080
+```
+
+Web interface for interacting with your agent.
+
+### Chat API
+
+```
+http://localhost:8080/api/chat
+```
+
+REST endpoint for programmatic access.
+
+### Health Check
+
+```
+http://localhost:8080/health
+```
+
+Returns server status for monitoring.
+
+## Examples
+
+### Default (Current Directory)
+
+```bash
+klisk serve
+```
+
+Output:
+```
+  Chat UI: http://0.0.0.0:8080
+  API:     http://0.0.0.0:8080/api/chat
+  Health:  http://0.0.0.0:8080/health
+  Project: /path/to/project
+```
+
+### Specific Project
+
+```bash
+klisk serve my-agent
+```
+
+### Custom Port
+
+```bash
+klisk serve --port 3000
+```
+
+### Custom Host and Port
+
+```bash
+klisk serve --host 127.0.0.1 --port 5000
+```
+
+### Using Environment Variable
+
+```bash
+PORT=9000 klisk serve my-agent
+```
+
+### Cloud Deployment
+
+Most cloud platforms set the `PORT` environment variable automatically:
+
+```bash
+# Railway, Render, etc.
+klisk serve
+```
+
+The server will use the platform's assigned port.
+
+## Configuration
+
+The server loads configuration from:
+
+1. **Project config**: `klisk.config.yaml`
+2. **Environment variables**: `.env` file in the project root
+3. **Runtime options**: `--port` and `--host` flags
+
+### Port Priority
+
+1. `--port` flag (highest priority)
+2. `$PORT` environment variable
+3. Default: `8080`
+
+## Environment Variables
+
+Ensure your `.env` file contains necessary API keys:
+
+```bash
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+The server loads these on startup.
+
+## Production Considerations
+
+### Deployment Checklist
+
+- [ ] Set real API keys in `.env`
+- [ ] Configure appropriate host (`0.0.0.0` for containers, `127.0.0.1` for local)
+- [ ] Use environment variable for port (cloud platforms)
+- [ ] Set up health check monitoring at `/health`
+- [ ] Consider rate limiting and authentication
+
+### Performance
+
+The production server:
+- Uses production ASGI settings
+- Disables hot reload (unlike `klisk dev`)
+- Optimized for concurrent requests
+- No debug mode or verbose logging
+
+### Security
+
+For production deployments:
+- Use HTTPS (configure at reverse proxy level)
+- Implement authentication/authorization
+- Set appropriate CORS policies
+- Protect API keys (never commit to version control)
+
+## Differences from `klisk dev`
+
+| Feature | `klisk dev` | `klisk serve` |
+|---------|-------------|---------------|
+| Hot reload | Yes | No |
+| Studio features | Full development UI | Production chat UI |
+| Port default | 8000 (from config) | 8080 (from $PORT or default) |
+| Workspace mode | Supported | Single project only |
+| Logging | Verbose | Production-level |
+| Use case | Development | Production/staging |
+
+## API Usage
+
+Interact with the chat API programmatically:
+
+```bash
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Hello, agent!",
+    "agent": "my-agent"
+  }'
+```
+
+## Monitoring
+
+Use the health endpoint for uptime monitoring:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Integrate with monitoring services:
+- Uptime Robot
+- Pingdom
+- Cloud provider health checks (AWS, GCP, Azure)
+
+## Deployment Examples
+
+### Docker
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+RUN pip install klisk
+EXPOSE 8080
+CMD ["klisk", "serve", ".", "--port", "8080"]
+```
+
+### Railway
+
+```bash
+# Railway automatically sets $PORT
+klisk serve
+```
+
+### Google Cloud Run
+
+See [`klisk deploy`](/cli/deploy) for automated Cloud Run deployment.
+
+## Related Commands
+
+- [`klisk dev`](/cli/dev) - Development server with hot reload
+- [`klisk deploy`](/cli/deploy) - Deploy to Google Cloud Run
+- [`klisk run`](/cli/run) - Run agent from CLI
+- [`klisk check`](/cli/check) - Validate before serving

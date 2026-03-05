@@ -1,0 +1,397 @@
+---
+title: Project Structure
+description: Project layout, configuration files, and directory conventions
+---
+
+Klisk projects follow a simple, convention-based structure that makes it easy to organize agents and tools.
+
+## Default Layout
+
+When you run `klisk create my-agent`, you get this structure:
+
+```
+my-agent/
+├── klisk.config.yaml    # Project configuration
+├── .env                 # API keys and secrets (gitignored)
+└── src/
+    ├── main.py          # Agent definitions
+    └── tools/
+        ├── __init__.py
+        └── example.py   # Tool implementations
+```
+
+<Tip>
+  This structure is a convention, not a requirement. You can organize your code however you like as long as the entry point is specified in `klisk.config.yaml`.
+</Tip>
+
+## Configuration File
+
+### klisk.config.yaml
+
+The root configuration file defines project metadata and entry point:
+
+```yaml klisk.config.yaml
+entry: src/main.py
+name: "MyAgent"
+studio:
+  port: 3000
+api:
+  port: 8000
+```
+
+<ParamField path="entry" type="string" required>
+  Path to the Python file that defines your agents (relative to project root)
+</ParamField>
+
+<ParamField path="name" type="string" default="MyAgent">
+  Display name for the project (shown in Studio header)
+</ParamField>
+
+<ParamField path="studio.port" type="number" default={3000}>
+  Port for the Studio web interface (currently unused, defaults to 8000)
+</ParamField>
+
+<ParamField path="api.port" type="number" default={8000}>
+  Port for the dev server and API endpoints
+</ParamField>
+
+<Note>
+  If `klisk.config.yaml` is missing, Klisk uses default values and assumes `src/main.py` as the entry point.
+</Note>
+
+## Entry Point
+
+### src/main.py
+
+The entry file imports and defines your agents:
+
+```python src/main.py
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Assistant",
+    instructions="You are a helpful assistant. Use the tools available to help the user.",
+    model="gpt-5.2",
+    tools=get_tools("greet"),
+)
+```
+
+<Info>
+  Klisk automatically discovers all `define_agent()` calls in your entry file and registers them. You can define multiple agents in a single file or split them across modules.
+</Info>
+
+### Module Imports
+
+You can organize agents across multiple files:
+
+```python src/main.py
+from klisk import define_agent, get_tools
+from .specialized_agents import researcher, writer
+
+assistant = define_agent(
+    name="Assistant",
+    model="gpt-5.2",
+    tools=get_tools("greet"),
+)
+```
+
+```python src/specialized_agents.py
+from klisk import define_agent, get_tools
+
+researcher = define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    tools=get_tools("web_search"),
+    builtin_tools=["web_search"],
+)
+
+writer = define_agent(
+    name="Writer",
+    model="anthropic/claude-sonnet-4-5",
+    instructions="You are a professional writer.",
+)
+```
+
+<Warning>
+  All agent definitions must be imported into the entry file (directly or indirectly) to be discovered by Klisk.
+</Warning>
+
+## Tools Directory
+
+### src/tools/
+
+Tools are Python functions decorated with `@tool`. Klisk discovers them automatically from any `.py` file in the project.
+
+```python src/tools/example.py
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet someone by name."""
+    return f"Hello, {name}! How can I help you today?"
+```
+
+### Tool Discovery
+
+Klisk scans your project for `@tool` decorators:
+
+1. Walks all `.py` files in the project directory
+2. Parses each file with AST to find decorated functions
+3. Registers tools by function name
+4. Extracts docstrings as descriptions and type hints as parameters
+
+<CodeGroup>
+```python Single File
+# src/tools/greetings.py
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet someone by name."""
+    return f"Hello, {name}!"
+
+@tool
+async def farewell(name: str) -> str:
+    """Say goodbye to someone."""
+    return f"Goodbye, {name}!"
+```
+
+```python Multiple Files
+# src/tools/greetings.py
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet someone by name."""
+    return f"Hello, {name}!"
+
+# src/tools/calculations.py
+from klisk import tool
+
+@tool
+async def add(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+```
+
+```python Nested Directories
+# src/tools/text/formatting.py
+from klisk import tool
+
+@tool
+async def to_uppercase(text: str) -> str:
+    """Convert text to uppercase."""
+    return text.upper()
+```
+</CodeGroup>
+
+### Tool Naming
+
+Tool names are derived from function names:
+
+- Function `greet` → tool `"greet"`
+- Function `fetch_weather` → tool `"fetch_weather"`
+
+Reference them in agents using `get_tools()`:
+
+```python
+agent = define_agent(
+    name="Assistant",
+    model="gpt-5.2",
+    tools=get_tools("greet", "fetch_weather"),
+)
+```
+
+<Warning>
+  Tool names must be unique across your project. If you define two tools with the same name, the last one discovered will overwrite earlier definitions.
+</Warning>
+
+## Environment Variables
+
+### .env
+
+Store API keys and secrets in a `.env` file at the project root:
+
+```bash .env
+OPENAI_API_KEY=sk-your-key-here
+
+# Uncomment and fill in the API key for your chosen provider:
+# ANTHROPIC_API_KEY=sk-ant-your-key-here
+# GEMINI_API_KEY=your-key-here
+# MISTRAL_API_KEY=your-key-here
+```
+
+Klisk loads this file automatically when you run `klisk dev` or `klisk run`:
+
+```python
+# From dev.py
+from dotenv import load_dotenv
+from klisk.core.config import ProjectConfig
+
+project_path = resolve_project(name_or_path)
+load_dotenv(project_path / ".env")
+
+config = ProjectConfig.load(project_path)
+```
+
+<Warning>
+  Never commit `.env` to version control. The default `.gitignore` includes `.env` to prevent accidental exposure of secrets.
+</Warning>
+
+## Workspace Directory
+
+### ~/.klisk/projects/
+
+Klisk uses a global workspace directory to store projects:
+
+```
+~/.klisk/
+└── projects/
+    ├── my-agent/
+    │   ├── klisk.config.yaml
+    │   ├── .env
+    │   └── src/
+    ├── researcher/
+    └── writer/
+```
+
+Run `klisk dev` without arguments to work with all projects in this directory simultaneously.
+
+### Project Resolution
+
+When you run `klisk dev my-agent`, Klisk resolves the project path:
+
+1. If `my-agent` is an absolute or relative path, use it directly
+2. Otherwise, look for `~/.klisk/projects/my-agent/`
+3. If not found, raise an error
+
+```python
+# From paths.py (simplified)
+def resolve_project(name_or_path: str) -> Path:
+    path = Path(name_or_path)
+    if path.is_absolute() or path.exists():
+        return path.resolve()
+    
+    workspace_path = PROJECTS_DIR / name_or_path
+    if workspace_path.exists():
+        return workspace_path
+    
+    raise ValueError(f"Project not found: {name_or_path}")
+```
+
+## Ignored Paths
+
+Klisk ignores certain directories when scanning for tools and watching for changes:
+
+- `.git/`, `.venv/`, `__pycache__/`, `node_modules/`
+- Any directory starting with `.` (hidden directories)
+- Files outside `.py`, `.yaml`, `.yml` extensions (for watching)
+
+```python
+# From watcher.py
+def _is_relevant(path: str) -> bool:
+    p = Path(path)
+    parts = p.parts
+    if any(part.startswith(".") or part == "__pycache__" 
+           or part == "node_modules" or part == ".venv" 
+           for part in parts):
+        return False
+    return p.suffix in {".py", ".yaml", ".yml"}
+```
+
+## Multi-Project Workspace
+
+You can work with multiple projects in a workspace:
+
+```bash
+# Create multiple projects
+klisk create researcher
+klisk create writer
+klisk create coordinator
+
+# Launch Studio for all projects
+klisk dev
+
+# The Studio lists all agents from all projects
+# Each agent is prefixed with its project name:
+# - researcher/Researcher
+# - writer/Writer
+# - coordinator/Coordinator
+```
+
+<Tip>
+  In workspace mode, agent and tool names are prefixed with the project name to avoid collisions (e.g., `researcher/search` vs `writer/search`).
+</Tip>
+
+## Custom Layouts
+
+You can use any structure as long as you update `klisk.config.yaml`:
+
+```yaml
+entry: agents/main_agent.py
+name: "CustomLayout"
+```
+
+Klisk will discover tools from anywhere in the project directory, so you can organize them however makes sense:
+
+```
+custom-project/
+├── klisk.config.yaml
+├── agents/
+│   └── main_agent.py
+├── tooling/
+│   ├── api_calls.py
+│   └── data_processing.py
+└── utils/
+    └── helpers.py
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep tools focused and single-purpose">
+    Each tool should do one thing well. This makes them easier to test, compose, and understand.
+  </Accordion>
+  
+  <Accordion title="Use descriptive docstrings">
+    The docstring becomes the tool description shown to the LLM. Make it clear and actionable.
+  </Accordion>
+  
+  <Accordion title="Organize tools by domain">
+    Group related tools in subdirectories: `src/tools/web/`, `src/tools/data/`, etc.
+  </Accordion>
+  
+  <Accordion title="Avoid circular imports">
+    Don't import agents from tool files or vice versa. Keep dependencies unidirectional.
+  </Accordion>
+  
+  <Accordion title="Use .env for all secrets">
+    Never hardcode API keys or credentials. Always use environment variables.
+  </Accordion>
+</AccordionGroup>
+
+## File Watching Behavior
+
+The dev server watches your project and reloads when files change:
+
+```python
+# From app.py
+async def _on_file_change() -> None:
+    global _snapshot
+    try:
+        if _workspace_mode:
+            _snapshot = discover_all_projects()
+        else:
+            _snapshot = discover_project(_project_path)
+    except Exception as e:
+        logger.exception("Failed to reload project")
+        _snapshot = ProjectSnapshot()
+        _snapshot.config = {"error": str(e)}
+
+    # Notify all connected Studio clients
+    data = json.dumps({"type": "reload", "snapshot": _snapshot.to_dict()})
+    for ws in _reload_clients:
+        await ws.send_text(data)
+```
+
+This enables hot reload without restarting the server.

@@ -1,0 +1,286 @@
+---
+title: Tools
+description: Create custom tools that extend your agent's capabilities
+---
+
+Tools are functions that agents can call to perform actions beyond text generation. They enable agents to search the web, query databases, call APIs, manipulate files, and more.
+
+## Defining a tool
+
+Use the `@tool` decorator to define a tool:
+
+```python
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet someone by name."""
+    return f"Hello, {name}! How can I help you today?"
+```
+
+The `@tool` decorator:
+- Wraps the OpenAI Agents SDK `@function_tool` decorator
+- Automatically registers the tool in the global `AgentRegistry`
+- Captures the source file for Studio tracking
+- Generates JSON schemas from type hints
+
+<Note>
+  Tools must be imported before `define_agent()` is called for them to be available via `get_tools()`.
+</Note>
+
+## Function signatures
+
+### Type hints are required
+
+Klisk uses type hints to automatically generate the JSON schema that tells the agent how to call your tool:
+
+```python
+@tool
+async def search(query: str, max_results: int = 10) -> list[dict]:
+    """Search for information.
+    
+    Args:
+        query: The search query string
+        max_results: Maximum number of results to return
+    """
+    # Implementation
+    return results
+```
+
+The agent receives:
+```json
+{
+  "name": "search",
+  "description": "Search for information.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {"type": "string", "description": "The search query string"},
+      "max_results": {"type": "integer", "description": "Maximum number of results to return", "default": 10}
+    },
+    "required": ["query"]
+  }
+}
+```
+
+### Async functions
+
+Both async and sync functions work:
+
+```python
+@tool
+async def async_tool(query: str) -> str:
+    """This is async (recommended for I/O)."""
+    result = await some_api_call(query)
+    return result
+
+@tool
+def sync_tool(x: int) -> int:
+    """This is synchronous."""
+    return x * 2
+```
+
+<Tip>
+  Use `async` functions for tools that perform I/O operations (API calls, database queries, file operations) for better performance.
+</Tip>
+
+### Docstrings
+
+The docstring becomes the tool's description that the agent sees. Write clear descriptions that explain:
+- What the tool does
+- When to use it
+- What parameters mean
+- What the return value contains
+
+```python
+@tool
+async def analyze_sentiment(text: str, language: str = "en") -> dict:
+    """Analyze the emotional sentiment of text.
+    
+    Use this to determine if text is positive, negative, or neutral.
+    Supports multiple languages.
+    
+    Args:
+        text: The text to analyze
+        language: ISO language code (default: "en")
+        
+    Returns:
+        Dict with 'sentiment' (positive/negative/neutral) and 'confidence' (0-1)
+    """
+    # Implementation
+    return {"sentiment": "positive", "confidence": 0.92}
+```
+
+## Decorator options
+
+The `@tool` decorator accepts optional parameters:
+
+```python
+@tool(name_override="custom_name")
+async def my_function(x: str) -> str:
+    """This tool will be registered as 'custom_name' instead of 'my_function'."""
+    return x
+```
+
+All parameters supported by the OpenAI Agents SDK `@function_tool` are available.
+
+## Retrieving tools with get_tools()
+
+Use `get_tools()` to reference registered tools by name:
+
+```python
+from klisk import define_agent, get_tools
+
+agent = define_agent(
+    name="Assistant",
+    tools=get_tools("greet", "search", "analyze"),
+)
+```
+
+This pattern enables:
+- **Modular organization** — Define tools in separate files under `src/tools/`
+- **Reusability** — Share tools across multiple agents
+- **Type safety** — Get validation errors at registration time, not runtime
+
+```python
+# Will raise ValueError if the tool doesn't exist
+tools=get_tools("nonexistent_tool")  # ValueError: Tool 'nonexistent_tool' not found
+```
+
+## Tool discovery
+
+Klisk automatically discovers tools when their modules are imported. The typical project structure:
+
+```
+my-agent/
+├── src/
+│   ├── main.py              # Defines agents
+│   └── tools/
+│       ├── __init__.py      # Imports all tools
+│       ├── search.py        # @tool definitions
+│       ├── data.py          # @tool definitions
+│       └── utils.py         # @tool definitions
+```
+
+**src/tools/\_\_init\_\_.py:**
+```python
+# Import all tool modules to ensure they're registered
+from . import search
+from . import data
+from . import utils
+```
+
+**src/tools/search.py:**
+```python
+from klisk import tool
+
+@tool
+async def web_search(query: str) -> str:
+    """Search the web for information."""
+    # Implementation
+    return results
+```
+
+**src/main.py:**
+```python
+from klisk import define_agent, get_tools
+import tools  # Triggers tool registration
+
+agent = define_agent(
+    name="Assistant",
+    tools=get_tools("web_search"),  # Now available
+)
+```
+
+<Warning>
+  If you don't import the module containing a `@tool` definition before calling `get_tools()`, the tool won't be registered and you'll get a `ValueError`.
+</Warning>
+
+## Tool registry
+
+Tools are tracked in the global `AgentRegistry` as `ToolEntry` objects:
+
+```python
+from klisk import AgentRegistry
+
+registry = AgentRegistry.get_instance()
+tool_entry = registry.get_tool("greet")
+
+print(tool_entry.name)          # "greet"
+print(tool_entry.description)   # "Greet someone by name."
+print(tool_entry.parameters)    # {"type": "object", ...}
+print(tool_entry.source_file)   # "/path/to/src/tools/example.py"
+```
+
+This metadata powers:
+- **Studio UI** — Displays tool documentation and parameters
+- **Hot reload** — Watches tool source files for changes
+- **CLI validation** — `klisk check` validates tool references
+
+## Complete example
+
+**src/tools/data.py:**
+```python
+from klisk import tool
+import aiohttp
+
+@tool
+async def fetch_user(user_id: int) -> dict:
+    """Fetch user data from the API.
+    
+    Args:
+        user_id: The numeric user ID
+        
+    Returns:
+        Dict containing user profile data
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.example.com/users/{user_id}") as resp:
+            return await resp.json()
+
+@tool
+async def analyze_data(data: list[float], method: str = "mean") -> float:
+    """Analyze a list of numbers.
+    
+    Args:
+        data: List of numeric values
+        method: Analysis method - "mean", "median", or "sum"
+        
+    Returns:
+        The computed statistic
+    """
+    if method == "mean":
+        return sum(data) / len(data)
+    elif method == "median":
+        sorted_data = sorted(data)
+        n = len(sorted_data)
+        return sorted_data[n // 2] if n % 2 else (sorted_data[n//2-1] + sorted_data[n//2]) / 2
+    elif method == "sum":
+        return sum(data)
+    else:
+        raise ValueError(f"Unknown method: {method}")
+```
+
+**src/main.py:**
+```python
+from klisk import define_agent, get_tools
+import tools
+
+agent = define_agent(
+    name="DataAssistant",
+    instructions="Help users fetch and analyze data.",
+    model="gpt-5.2",
+    tools=get_tools("fetch_user", "analyze_data"),
+)
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Agents" icon="robot" href="/concepts/agents">
+    Learn how to configure agents that use your tools
+  </Card>
+  <Card title="Builtin Tools" icon="toolbox" href="/concepts/builtin-tools">
+    Explore provider-hosted tools like web search
+  </Card>
+</CardGroup>

@@ -1,0 +1,116 @@
+---
+title: "FileSearch"
+description: "File search builtin tool for OpenAI models"
+---
+
+## Overview
+
+The `FileSearch` class provides semantic file search capabilities for agents using vector stores. This builtin tool is only supported with OpenAI models and requires vector store IDs to be configured.
+
+## Class Definition
+
+```python
+from klisk.core.builtin_tools import FileSearch
+```
+
+Defined in: `src/klisk/core/builtin_tools.py:24`
+
+## Parameters
+
+<ParamField path="vector_store_ids" type="list[str]" default="[]" required>
+  List of vector store IDs to search through. This parameter is required and must contain at least one vector store ID.
+  
+  Example: `["vs_abc123", "vs_def456"]`
+</ParamField>
+
+<ParamField path="max_num_results" type="int | None" default="None">
+  Maximum number of search results to return. When `None`, the provider's default limit is used.
+</ParamField>
+
+## Usage
+
+### Basic Usage with Vector Store IDs
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import FileSearch
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        FileSearch(vector_store_ids=["vs_abc123"])
+    ],
+)
+```
+
+### Multiple Vector Stores
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import FileSearch
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        FileSearch(vector_store_ids=[
+            "vs_abc123",
+            "vs_def456",
+            "vs_ghi789"
+        ])
+    ],
+)
+```
+
+### Custom Max Results
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import FileSearch
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        FileSearch(
+            vector_store_ids=["vs_abc123"],
+            max_num_results=10
+        )
+    ],
+)
+```
+
+### Multiple Builtin Tools
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import FileSearch
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        "web_search",
+        FileSearch(vector_store_ids=["vs_abc123"]),
+    ],
+)
+```
+
+## Important Notes
+
+<Warning>
+  The `FileSearch` tool is only supported with OpenAI models. Using it with non-OpenAI models will raise a `ValueError`.
+</Warning>
+
+<Warning>
+  Unlike other builtin tools, `FileSearch` **cannot** be used with the string shortcut `"file_search"`. You must use the object form with `vector_store_ids` configured:
+  
+  ```python
+  # This will raise an error:
+  builtin_tools=["file_search"]
+  
+  # Use this instead:
+  builtin_tools=[FileSearch(vector_store_ids=["vs_abc123"])]
+  ```
+</Warning>
+
+<Info>
+  The `vector_store_ids` parameter must contain at least one valid vector store ID, or a `ValueError` will be raised at runtime.
+</Info>

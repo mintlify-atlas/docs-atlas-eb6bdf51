@@ -1,0 +1,336 @@
+---
+title: klisk check
+description: Validate project structure, agents, and tools
+---
+
+## Usage
+
+```bash
+klisk check [name_or_path] [options]
+```
+
+## Description
+
+Validates that your Klisk project is well-formed by checking configuration, agents, tools, and common issues.
+
+## Arguments
+
+<ParamField path="name_or_path" type="string" default=".">
+  Project name or path to check.
+</ParamField>
+
+## Options
+
+<ParamField path="--agent" type="string">
+  Check only a specific agent by name. Use `-a` as shorthand.
+</ParamField>
+
+## Validation Checks
+
+The command performs the following validations:
+
+### 1. Configuration
+
+- `klisk.config.yaml` exists and is valid YAML
+- All required fields are present
+- Values are within acceptable ranges
+
+### 2. Entry Point
+
+- Entry file exists (default: `main.py`)
+- File is readable and contains valid Python
+
+### 3. Agent Discovery
+
+- Agents are properly registered
+- Agents use valid `define_agent()` syntax
+- Model settings are correctly configured
+
+### 4. Tool Discovery
+
+- Tools are properly registered
+- Tools have docstrings (required for agent descriptions)
+- Tools have type hints for parameters
+
+### 5. Model Settings Validation
+
+**Common mistakes**:
+- `temperature` set in `model_settings` instead of `define_agent()` parameter
+- `reasoning_effort` set in `model_settings` instead of `define_agent()` parameter
+
+### 6. Reasoning Effort Validation
+
+Checks `reasoning_effort` parameter for:
+- Valid values: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
+- Model compatibility (o-series and gpt-5+ only)
+- Provider-specific warnings (OpenAI vs LiteLLM)
+
+## Exit Codes
+
+- `0` - All checks passed
+- `1` - One or more errors found
+
+## Examples
+
+### Check Current Project
+
+```bash
+klisk check
+```
+
+Output:
+```
+  ✓ Config valid
+  ✓ Entry point: main.py
+  ✓ 2 agent(s) registered
+  ✓ 5 tool(s) registered
+  ✓ 3 builtin tool(s): builtin:memory, builtin:file_search, builtin:web_search
+
+All checks passed.
+```
+
+### Check Specific Project
+
+```bash
+klisk check customer-support
+```
+
+### Check Specific Agent
+
+```bash
+klisk check --agent email-classifier
+```
+
+Output:
+```
+  ✓ Config valid
+  ✓ Entry point: main.py
+  ✓ Checking agent: email-classifier
+  ✓ 2 tool(s) used by 'email-classifier'
+
+All checks passed.
+```
+
+### Check with Errors
+
+```bash
+klisk check
+```
+
+Output:
+```
+  ✓ Config valid
+  ✓ Entry point: main.py
+  ✗ Agent 'my-agent': temperature should be a define_agent() parameter, not inside model_settings
+  ⚠ Agent 'vision-agent': reasoning_effort='high' is not supported by 'gpt-4o'. Only o-series (o1, o3, o4-mini) and gpt-5+ support it
+  ✗ Tool 'calculate' missing docstring
+```
+
+Exit code: `1`
+
+## Check Results
+
+Results are displayed with symbols:
+
+- `✓` Success - Check passed
+- `⚠` Warning - Not critical but should be reviewed
+- `✗` Error - Must be fixed
+
+## Common Errors
+
+### Temperature in model_settings
+
+**Error**:
+```
+✗ Agent 'my-agent': temperature should be a define_agent() parameter, not inside model_settings
+```
+
+**Fix**:
+```python
+# ❌ Wrong
+Agent(
+    model_settings=ModelSettings(temperature=0.7)
+)
+
+# ✅ Correct
+Agent(
+    temperature=0.7
+)
+```
+
+### Reasoning Effort in model_settings
+
+**Error**:
+```
+✗ Agent 'my-agent': reasoning_effort should be a define_agent() parameter, not inside model_settings
+```
+
+**Fix**:
+```python
+# ❌ Wrong
+Agent(
+    model_settings=ModelSettings(
+        reasoning=ReasoningSettings(effort="high")
+    )
+)
+
+# ✅ Correct
+Agent(
+    reasoning_effort="high"
+)
+```
+
+### Invalid Reasoning Effort Value
+
+**Error**:
+```
+✗ Agent 'my-agent': invalid reasoning_effort 'very-high'. Valid values: high, low, medium, minimal, none, xhigh
+```
+
+**Fix**:
+```python
+# ❌ Wrong
+Agent(
+    reasoning_effort="very-high"
+)
+
+# ✅ Correct
+Agent(
+    reasoning_effort="xhigh"  # Use 'xhigh' not 'very-high'
+)
+```
+
+### Unsupported Model for Reasoning
+
+**Warning**:
+```
+⚠ Agent 'my-agent': reasoning_effort='high' is not supported by 'gpt-4o'. Only o-series (o1, o3, o4-mini) and gpt-5+ support it
+```
+
+**Fix**:
+```python
+# Option 1: Remove reasoning_effort
+Agent(
+    model="gpt-4o"
+    # Don't use reasoning_effort with gpt-4o
+)
+
+# Option 2: Use a supported model
+Agent(
+    model="o1",
+    reasoning_effort="high"
+)
+```
+
+### Missing Tool Docstring
+
+**Error**:
+```
+✗ Tool 'calculate' missing docstring
+```
+
+**Fix**:
+```python
+# ❌ Wrong
+def calculate(a: int, b: int) -> int:
+    return a + b
+
+# ✅ Correct
+def calculate(a: int, b: int) -> int:
+    """Add two numbers together."""
+    return a + b
+```
+
+### Agent Not Found
+
+**Error**:
+```
+✗ Agent 'typo-agent' not found. Available: email-classifier, support-bot
+```
+
+**Fix**: Use the correct agent name from the "Available" list.
+
+## Reasoning Effort Details
+
+### Valid Values
+
+- `none` - No extended reasoning
+- `minimal` - Very brief reasoning (OpenAI-specific)
+- `low` - Light reasoning
+- `medium` - Balanced reasoning
+- `high` - Deep reasoning
+- `xhigh` - Maximum reasoning (OpenAI-specific)
+
+### Model Support
+
+**Supported models**:
+- `o1`, `o3`, `o4-mini` (o-series)
+- `gpt-5.1`, `gpt-5.2` (gpt-5+)
+
+**Not supported**:
+- `gpt-4.1`, `gpt-4o`, `gpt-4o-mini`
+- Older OpenAI models
+
+### Provider-Specific Values
+
+**OpenAI only**:
+- `minimal`
+- `xhigh`
+
+**Cross-provider**:
+- `none`, `low`, `medium`, `high`
+
+If you use `minimal` or `xhigh` with a LiteLLM provider (Anthropic, Google, etc.), you'll get a warning:
+
+```
+⚠ Agent 'my-agent': reasoning_effort='minimal' is OpenAI-specific and may not be supported by 'anthropic/claude-3-5-sonnet'
+```
+
+## Integration with CI/CD
+
+Run checks in your CI pipeline:
+
+```yaml
+# GitHub Actions
+- name: Validate Klisk project
+  run: klisk check || exit 1
+```
+
+```yaml
+# GitLab CI
+validate:
+  script:
+    - klisk check
+```
+
+## Best Practices
+
+1. **Run before deployment**:
+   ```bash
+   klisk check && klisk deploy
+   ```
+
+2. **Check specific agents during development**:
+   ```bash
+   klisk check --agent my-new-agent
+   ```
+
+3. **Include in pre-commit hooks**:
+   ```bash
+   # .git/hooks/pre-commit
+   #!/bin/bash
+   klisk check || exit 1
+   ```
+
+4. **Validate after major changes**:
+   - Changing agent configurations
+   - Adding/removing tools
+   - Updating model settings
+   - Modifying `klisk.config.yaml`
+
+## Related Commands
+
+- [`klisk dev`](/cli/dev) - Start development server
+- [`klisk deploy`](/cli/deploy) - Deploy to production
+- [`klisk run`](/cli/run) - Test agent functionality
+- [`klisk list`](/cli/list) - View all projects

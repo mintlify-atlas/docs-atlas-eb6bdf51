@@ -1,0 +1,421 @@
+---
+title: Builtin Tools
+description: Provider-hosted tools for web search, code execution, file search, and image generation
+---
+
+Builtin tools are provider-hosted capabilities that extend your agent without writing custom code. They're maintained and executed by the model provider (OpenAI).
+
+<Warning>
+  **All builtin tools require OpenAI models.** They will be automatically disabled with a warning if you use a non-OpenAI model like Anthropic or Gemini.
+</Warning>
+
+## Available tools
+
+Klisk supports four builtin tools:
+
+<CardGroup cols={2}>
+  <Card title="web_search" icon="magnifying-glass">
+    Search the web for real-time information
+  </Card>
+  <Card title="code_interpreter" icon="terminal">
+    Execute Python code in a sandboxed environment
+  </Card>
+  <Card title="file_search" icon="file-magnifying-glass">
+    Semantic search across vector stores
+  </Card>
+  <Card title="image_generation" icon="image">
+    Generate images from text descriptions
+  </Card>
+</CardGroup>
+
+## Usage
+
+Pass builtin tools to `define_agent()` via the `builtin_tools` parameter:
+
+```python
+from klisk import define_agent
+
+agent = define_agent(
+    name="Assistant",
+    model="gpt-5.2",
+    builtin_tools=["web_search", "code_interpreter"],
+)
+```
+
+### String shortcuts vs objects
+
+You can specify builtin tools in two ways:
+
+**1. String shortcuts** (uses default configuration):
+
+```python
+builtin_tools=["web_search", "code_interpreter", "image_generation"]
+```
+
+**2. Configured objects** (customize behavior):
+
+```python
+from klisk import WebSearch, CodeInterpreter, ImageGeneration
+
+builtin_tools=[
+    WebSearch(search_context_size="high"),
+    CodeInterpreter(container={"image": "python:3.11"}),
+    ImageGeneration(model="gpt-image-1", quality="high"),
+]
+```
+
+<Note>
+  `file_search` **requires** the object form because it needs `vector_store_ids`. You cannot use the string shortcut.
+</Note>
+
+## web_search
+
+Search the web for real-time information.
+
+### Basic usage
+
+```python
+define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    builtin_tools=["web_search"],
+)
+```
+
+### Configuration
+
+```python
+from klisk import define_agent, WebSearch
+
+agent = define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    builtin_tools=[
+        WebSearch(search_context_size="high"),
+    ],
+)
+```
+
+**Parameters:**
+
+<ParamField path="search_context_size" type="string" default="medium">
+  How much context to return per search result. Options: `"low"`, `"medium"`, `"high"`
+</ParamField>
+
+**When to use:**
+- Answering questions about current events
+- Fact-checking with recent information
+- Research tasks requiring multiple sources
+- Looking up documentation or articles
+
+**Example conversation:**
+
+```
+User: What are the latest developments in AI agents?
+Agent: [Uses web_search] Based on recent articles...
+```
+
+## code_interpreter
+
+Execute Python code in a sandboxed environment. Useful for data analysis, calculations, and file processing.
+
+### Basic usage
+
+```python
+define_agent(
+    name="DataAnalyst",
+    model="gpt-5.2",
+    builtin_tools=["code_interpreter"],
+)
+```
+
+### Configuration
+
+```python
+from klisk import define_agent, CodeInterpreter
+
+agent = define_agent(
+    name="DataAnalyst",
+    model="gpt-5.2",
+    builtin_tools=[
+        CodeInterpreter(
+            container={"image": "python:3.11", "memory": "2gb"},
+        ),
+    ],
+)
+```
+
+**Parameters:**
+
+<ParamField path="container" type="dict" default="None">
+  Container configuration for the code execution environment. Optional.
+</ParamField>
+
+**When to use:**
+- Analyzing CSV or JSON data
+- Performing complex mathematical calculations
+- Generating charts and visualizations
+- Processing files uploaded by users
+
+**Example conversation:**
+
+```
+User: Analyze this CSV and find the average sales by region
+Agent: [Uses code_interpreter to load CSV and compute statistics]
+```
+
+## file_search
+
+Semantic search across vector stores. Query large document collections using natural language.
+
+<Warning>
+  `file_search` **cannot** use the string shortcut. You must use the object form with `vector_store_ids`.
+</Warning>
+
+### Configuration (required)
+
+```python
+from klisk import define_agent, FileSearch
+
+agent = define_agent(
+    name="DocumentAssistant",
+    model="gpt-5.2",
+    builtin_tools=[
+        FileSearch(
+            vector_store_ids=["vs_abc123"],
+            max_num_results=10,
+        ),
+    ],
+)
+```
+
+**Parameters:**
+
+<ParamField path="vector_store_ids" type="list[str]" required>
+  List of OpenAI vector store IDs to search. Must be created via the OpenAI API or dashboard.
+</ParamField>
+
+<ParamField path="max_num_results" type="int" default="None">
+  Maximum number of search results to return. Optional.
+</ParamField>
+
+### Creating vector stores
+
+Vector stores must be created separately using the OpenAI API:
+
+```python
+import openai
+
+# Create a vector store
+vector_store = openai.beta.vector_stores.create(
+    name="Company Documentation",
+)
+
+# Upload files
+with open("docs.pdf", "rb") as f:
+    openai.beta.vector_stores.files.create(
+        vector_store_id=vector_store.id,
+        file=f,
+    )
+
+print(vector_store.id)  # vs_abc123
+```
+
+**When to use:**
+- Answering questions from company documentation
+- Searching through large knowledge bases
+- Building RAG (Retrieval-Augmented Generation) systems
+- Querying uploaded documents
+
+**Example conversation:**
+
+```
+User: What is our refund policy?
+Agent: [Uses file_search to find relevant policy documents] According to the policy...
+```
+
+## image_generation
+
+Generate images from text descriptions using OpenAI's image generation models.
+
+### Basic usage
+
+```python
+define_agent(
+    name="Designer",
+    model="gpt-5.2",
+    builtin_tools=["image_generation"],
+)
+```
+
+### Configuration
+
+```python
+from klisk import define_agent, ImageGeneration
+
+agent = define_agent(
+    name="Designer",
+    model="gpt-5.2",
+    builtin_tools=[
+        ImageGeneration(
+            model="gpt-image-1",
+            quality="high",
+            size="1536x1024",
+        ),
+    ],
+)
+```
+
+**Parameters:**
+
+<ParamField path="model" type="string" default="gpt-image-1">
+  Image generation model to use
+</ParamField>
+
+<ParamField path="quality" type="string" default="auto">
+  Image quality. Options: `"auto"`, `"low"`, `"medium"`, `"high"`
+</ParamField>
+
+<ParamField path="size" type="string" default="auto">
+  Image dimensions. Options: `"auto"`, `"1024x1024"`, `"1536x1024"`, `"1024x1536"`
+</ParamField>
+
+**When to use:**
+- Creating illustrations for content
+- Generating marketing materials
+- Visualizing concepts or ideas
+- Prototyping designs
+
+**Example conversation:**
+
+```
+User: Create an image of a sunset over mountains
+Agent: [Uses image_generation] Here's the image...
+```
+
+## OpenAI-only restriction
+
+Builtin tools are implemented by OpenAI and only work with OpenAI models. If you specify builtin tools with a non-OpenAI model, Klisk will:
+
+1. Issue a warning at agent creation time
+2. Disable the builtin tools
+3. Continue with only custom tools
+
+**Example:**
+
+```python
+# ❌ This will warn and disable web_search
+define_agent(
+    name="Researcher",
+    model="anthropic/claude-sonnet-4-5-20250929",
+    builtin_tools=["web_search"],  # Disabled
+)
+
+# Warning output:
+# "Builtin tools (web_search) are only supported with OpenAI models
+# and will be disabled for 'anthropic/claude-sonnet-4-5-20250929'."
+```
+
+**Solution:** Either:
+- Switch to an OpenAI model (`gpt-5.2`, `gpt-4o`, etc.)
+- Remove builtin tools and use custom tools instead
+
+This check happens in `primitives.py:109`.
+
+## Combining builtin and custom tools
+
+You can mix builtin tools with custom tools:
+
+```python
+from klisk import define_agent, get_tools, WebSearch
+
+agent = define_agent(
+    name="Assistant",
+    model="gpt-5.2",
+    tools=get_tools("format_response", "save_data"),
+    builtin_tools=[
+        WebSearch(search_context_size="high"),
+        "code_interpreter",
+    ],
+)
+```
+
+The agent can use all tools together:
+
+```
+User: Search for Python tutorials and save the best ones to a file
+Agent:
+  1. [Uses web_search to find tutorials]
+  2. [Uses code_interpreter to filter and rank results]
+  3. [Uses custom save_data tool to write to file]
+```
+
+## Complete example
+
+```python
+from klisk import (
+    define_agent,
+    get_tools,
+    WebSearch,
+    CodeInterpreter,
+    FileSearch,
+    ImageGeneration,
+)
+
+# Research agent with web search
+researcher = define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    instructions="Search the web and analyze findings.",
+    builtin_tools=[
+        WebSearch(search_context_size="high"),
+        CodeInterpreter(),
+    ],
+)
+
+# Document assistant with file search
+doc_assistant = define_agent(
+    name="DocAssistant",
+    model="gpt-5.2",
+    instructions="Answer questions from company documentation.",
+    builtin_tools=[
+        FileSearch(
+            vector_store_ids=["vs_abc123"],
+            max_num_results=5,
+        ),
+    ],
+)
+
+# Creative agent with image generation
+designer = define_agent(
+    name="Designer",
+    model="gpt-5.2",
+    instructions="Create visual content from descriptions.",
+    builtin_tools=[
+        ImageGeneration(
+            quality="high",
+            size="1536x1024",
+        ),
+    ],
+)
+
+# Full-featured assistant
+assistant = define_agent(
+    name="FullAssistant",
+    model="gpt-5.2",
+    instructions="A versatile assistant with all capabilities.",
+    tools=get_tools("custom_tool_1", "custom_tool_2"),
+    builtin_tools=["web_search", "code_interpreter", "image_generation"],
+)
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/concepts/tools">
+    Learn how to create custom tools
+  </Card>
+  <Card title="Models" icon="brain" href="/concepts/models">
+    Understand model selection and multi-provider support
+  </Card>
+</CardGroup>

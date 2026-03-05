@@ -1,0 +1,155 @@
+---
+title: "get_tools()"
+description: "Retrieve registered tools by name"
+---
+
+## Overview
+
+Retrieve registered tools by name from the global `AgentRegistry`. Use this in your entry point (e.g., `main.py`) to reference tools defined in separate files under the `tools/` directory.
+
+## Signature
+
+```python
+def get_tools(*names: str) -> list[FunctionTool]
+```
+
+## Parameters
+
+<ParamField path="*names" type="str" required>
+  Variable number of tool names to retrieve. Each name should match the name of a function decorated with `@tool` (or a custom name specified via `name_override`).
+</ParamField>
+
+## Returns
+
+<ResponseField name="tools" type="list[FunctionTool]">
+  A list of `FunctionTool` instances from the OpenAI Agents SDK, in the same order as the requested names.
+</ResponseField>
+
+## Errors
+
+Raises `ValueError` if any requested tool is not found in the registry. The error message indicates which tool is missing and reminds you to ensure it's decorated with `@tool`.
+
+```python
+ValueError: Tool 'search' not found. Make sure it's decorated with @tool.
+```
+
+## Example
+
+### Basic usage
+
+```python
+from klisk import define_agent, get_tools
+import tools.search
+import tools.greet
+
+agent = define_agent(
+    name="Assistant",
+    instructions="You can search and greet users.",
+    tools=get_tools("search", "greet"),
+)
+```
+
+### Retrieving a single tool
+
+```python
+from klisk import define_agent, get_tools
+import tools.calculator
+
+agent = define_agent(
+    name="MathAssistant",
+    instructions="You help with calculations.",
+    tools=get_tools("calculate"),
+)
+```
+
+### Retrieving multiple tools
+
+```python
+from klisk import define_agent, get_tools
+import tools.web
+import tools.weather
+import tools.calendar
+
+agent = define_agent(
+    name="PersonalAssistant",
+    instructions="You help manage daily tasks.",
+    tools=get_tools("search_web", "get_weather", "schedule_event"),
+)
+```
+
+## Project structure
+
+A typical project structure using `get_tools()`:
+
+```
+my-agent/
+├── main.py              # Entry point with define_agent()
+└── tools/
+    ├── __init__.py
+    ├── search.py        # Defines @tool decorated search()
+    ├── greet.py         # Defines @tool decorated greet()
+    └── weather.py       # Defines @tool decorated get_weather()
+```
+
+### Tool definitions
+
+```python
+# tools/search.py
+from klisk import tool
+
+@tool
+async def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+```
+
+```python
+# tools/greet.py
+from klisk import tool
+
+@tool
+async def greet(name: str) -> str:
+    """Greet a user by name."""
+    return f"Hello, {name}!"
+```
+
+### Main entry point
+
+```python
+# main.py
+from klisk import define_agent, get_tools
+
+# Import tool modules to register them
+import tools.search
+import tools.greet
+
+# Retrieve and use tools
+agent = define_agent(
+    name="Assistant",
+    instructions="You are a helpful assistant that can search and greet.",
+    tools=get_tools("search", "greet"),
+)
+```
+
+## Important notes
+
+- **Import before using**: You must import the module containing the `@tool` decorated function before calling `get_tools()`. This ensures the tool is registered in the `AgentRegistry`.
+
+  ```python
+  # ✓ Correct
+  import tools.search  # This registers the tool
+  tools = get_tools("search")  # Now it can be retrieved
+  
+  # ✗ Incorrect
+  tools = get_tools("search")  # Error: Tool 'search' not found
+  import tools.search  # Too late!
+  ```
+
+- **Tool names**: By default, the tool name is the function name. You can override this with `@tool(name_override="custom_name")`.
+
+- **Error handling**: If a tool is not found, `get_tools()` raises a `ValueError` immediately. Make sure all tool modules are imported.
+
+## See Also
+
+- [@tool decorator](/api/tool-decorator) - Define custom tools
+- [define_agent()](/api/define-agent) - Create agents that use tools

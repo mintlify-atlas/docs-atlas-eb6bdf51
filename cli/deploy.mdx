@@ -1,0 +1,412 @@
+---
+title: klisk deploy
+description: Deploy your Klisk agent to Google Cloud Run
+---
+
+## Usage
+
+```bash
+klisk deploy [options]
+klisk deploy init [project]
+```
+
+## Description
+
+Deploy your Klisk project to Google Cloud Run with automated setup for Docker, dependencies, and GCP configuration.
+
+## Subcommands
+
+### `klisk deploy init`
+
+Generate deployment files (Dockerfile, .dockerignore, requirements.txt).
+
+```bash
+klisk deploy init [project]
+```
+
+#### Arguments
+
+<ParamField path="project" type="string" default=".">
+  Project name or path to initialize for deployment.
+</ParamField>
+
+### `klisk deploy`
+
+Deploy to Google Cloud Run.
+
+```bash
+klisk deploy [options]
+```
+
+#### Options
+
+<ParamField path="--path" type="string">
+  Project name or path. Use `-p` as shorthand.
+  
+  **Default**: Current directory (`.`)
+</ParamField>
+
+<ParamField path="--service" type="string">
+  Cloud Run service name. Use `-s` as shorthand.
+  
+  **Default**: Slugified project name from `klisk.config.yaml`
+</ParamField>
+
+<ParamField path="--region" type="string">
+  GCP region for deployment. Use `-r` as shorthand.
+  
+  **Default**: Your gcloud default region (if not set, you'll be prompted)
+</ParamField>
+
+<ParamField path="--project" type="string">
+  GCP project ID.
+  
+  **Default**: Your gcloud default project (from `gcloud config get-value project`)
+</ParamField>
+
+## Deployment Workflow
+
+### 1. Initialize Deployment Files
+
+```bash
+klisk deploy init
+```
+
+This generates:
+
+**Dockerfile**:
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY *.whl .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8080
+CMD ["klisk", "serve", ".", "--port", "8080"]
+```
+
+**.dockerignore**:
+```
+.venv/
+__pycache__/
+*.pyc
+.git/
+.env
+.env.*
+node_modules/
+.mypy_cache/
+.pytest_cache/
+```
+
+**requirements.txt**:
+```
+./klisk-<version>.whl           # Standard agents
+./klisk-<version>.whl[litellm]  # If using non-OpenAI providers
+```
+
+The command also:
+- Builds a wheel file from the Klisk package
+- Detects if you're using LiteLLM models
+- Creates `.env` from `.env.example` if needed
+
+### 2. Configure API Keys
+
+Ensure `.env` contains real API keys (not placeholders):
+
+```bash
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+The deploy command will warn you if keys appear to be placeholders.
+
+### 3. Deploy to Cloud Run
+
+```bash
+klisk deploy
+```
+
+The deployment process:
+
+1. **Checks prerequisites**:
+   - gcloud CLI installed
+   - Authenticated with Google Cloud
+   - GCP project configured
+   - Billing enabled
+   - Required APIs enabled (Cloud Run, Cloud Build, Artifact Registry)
+   - Proper IAM permissions
+
+2. **Builds container** using Cloud Build
+
+3. **Deploys to Cloud Run**:
+   - Copies environment variables from `.env`
+   - Configures service as publicly accessible
+   - Returns the deployed URL
+
+## Prerequisites
+
+### Install gcloud CLI
+
+**macOS**:
+```bash
+brew install google-cloud-sdk
+```
+
+**Other platforms**:
+[https://cloud.google.com/sdk/docs/install](https://cloud.google.com/sdk/docs/install)
+
+### Authenticate
+
+```bash
+gcloud auth login
+```
+
+Follow the browser prompt to sign in.
+
+### Set GCP Project
+
+If you have an existing project:
+```bash
+gcloud config set project YOUR_PROJECT_ID
+```
+
+If you need to create one:
+1. Go to [https://console.cloud.google.com](https://console.cloud.google.com)
+2. Create a new project
+3. Run: `gcloud config set project YOUR_PROJECT_ID`
+
+### Enable Billing
+
+Cloud Run requires billing to be enabled. Google Cloud offers **$300 in free credits** for new accounts.
+
+Enable billing at: `https://console.cloud.google.com/billing?project=YOUR_PROJECT_ID`
+
+## Required APIs
+
+The deploy command automatically enables:
+- `run.googleapis.com` - Cloud Run
+- `cloudbuild.googleapis.com` - Cloud Build
+- `artifactregistry.googleapis.com` - Artifact Registry
+
+You'll be prompted to enable them if they're not already active.
+
+## Examples
+
+### Full Deployment Flow
+
+```bash
+# 1. Initialize deployment files
+klisk deploy init
+
+# 2. Verify .env has real API keys
+cat .env
+
+# 3. Deploy to Cloud Run
+klisk deploy
+```
+
+Output:
+```
+  Checking prerequisites...
+
+  Deploying to Cloud Run...
+  Service:  my-agent
+  Project:  my-gcp-project
+
+  Running: gcloud run deploy my-agent --source ...
+
+  [Cloud Build output...]
+
+  Deployed successfully!
+
+  Chat:   https://my-agent-abc123-uc.a.run.app
+  API:    https://my-agent-abc123-uc.a.run.app/api/chat
+  Health: https://my-agent-abc123-uc.a.run.app/health
+
+  Embed widget:
+  <script src="https://my-agent-abc123-uc.a.run.app/widget.js"></script>
+```
+
+### Deploy with Custom Service Name
+
+```bash
+klisk deploy --service customer-support-bot
+```
+
+### Deploy to Specific Region
+
+```bash
+klisk deploy --region us-central1
+```
+
+### Deploy Different Project
+
+```bash
+klisk deploy --path ~/klisk/my-other-agent
+```
+
+### Deploy to Different GCP Project
+
+```bash
+klisk deploy --project my-other-gcp-project
+```
+
+## Service Name Slugification
+
+Cloud Run service names must:
+- Be lowercase
+- Contain only letters, numbers, and hyphens
+- Start with a letter
+- Be 63 characters or fewer
+
+The deploy command automatically converts your project name:
+```
+"My Cool Agent!" → "my-cool-agent"
+"Agent_2024" → "agent-2024"
+```
+
+## Environment Variables
+
+Environment variables from `.env` are automatically set on the Cloud Run service. Placeholder values are skipped:
+
+**Deployed**:
+```bash
+OPENAI_API_KEY=sk-proj-...
+LOG_LEVEL=info
+```
+
+**Skipped** (placeholders):
+```bash
+API_KEY=your-key-here
+TOKEN=changeme
+SECRET=xxx
+```
+
+## LiteLLM Detection
+
+The deploy command scans your Python files for LiteLLM model providers:
+
+```python
+# Detected as LiteLLM (non-OpenAI)
+Agent(model="anthropic/claude-3-5-sonnet")
+Agent(model="gemini/gemini-pro")
+
+# Standard OpenAI
+Agent(model="gpt-5.2")
+Agent(model="openai/gpt-4o")
+```
+
+If LiteLLM providers are found, `requirements.txt` includes `klisk[litellm]`.
+
+## IAM Permissions
+
+The deploy command ensures the default Compute Engine service account has:
+- `roles/storage.objectAdmin` - Access Cloud Storage
+- `roles/logging.logWriter` - Write logs
+- `roles/artifactregistry.writer` - Push container images
+
+These are granted automatically during deployment.
+
+## Troubleshooting
+
+### Deployment Failed
+
+If deployment fails, try:
+
+1. **Re-run the command** - Permission propagation can take a few seconds
+2. **Check billing** - Ensure billing is enabled for the project
+3. **Enable APIs manually**:
+   ```bash
+   gcloud services enable run.googleapis.com \
+     cloudbuild.googleapis.com \
+     artifactregistry.googleapis.com
+   ```
+
+### Build Timeout
+
+If the build times out after 10 minutes:
+```
+Error: Deployment timed out after 10 minutes.
+```
+
+Check build status:
+```
+https://console.cloud.google.com/cloud-build/builds?project=YOUR_PROJECT_ID
+```
+
+### Missing API Keys
+
+If your deployed service returns errors, verify environment variables were set:
+
+```bash
+gcloud run services describe SERVICE_NAME --format="value(spec.template.spec.containers[0].env)"
+```
+
+### Permission Denied
+
+If you get permission errors:
+1. Verify you're authenticated: `gcloud auth list`
+2. Check you have Owner or Editor role on the project
+3. Enable required APIs manually (see above)
+
+## Post-Deployment
+
+### Test Your Deployment
+
+```bash
+curl https://YOUR-SERVICE.run.app/health
+```
+
+### View Logs
+
+```bash
+gcloud run logs read SERVICE_NAME --project=YOUR_PROJECT_ID
+```
+
+Or in the console:
+```
+https://console.cloud.google.com/run?project=YOUR_PROJECT_ID
+```
+
+### Update Deployment
+
+To deploy updates:
+
+```bash
+# Re-build deployment files (if needed)
+klisk deploy init
+
+# Deploy changes
+klisk deploy
+```
+
+Cloud Run performs a rolling update with zero downtime.
+
+### Embed Chat Widget
+
+Add the chat widget to your website:
+
+```html
+<script src="https://YOUR-SERVICE.run.app/widget.js"></script>
+```
+
+## Cost Optimization
+
+Cloud Run pricing is based on:
+- **Request time** - Pay only when handling requests
+- **CPU/memory** - Allocated resources
+- **Network egress** - Data transfer out
+
+**Free tier** (per month):
+- 2 million requests
+- 360,000 GB-seconds of memory
+- 180,000 vCPU-seconds
+
+Most Klisk deployments stay within the free tier for development and small-scale use.
+
+## Related Commands
+
+- [`klisk serve`](/cli/serve) - Test production server locally
+- [`klisk check`](/cli/check) - Validate project before deployment
+- [`klisk dev`](/cli/dev) - Development environment

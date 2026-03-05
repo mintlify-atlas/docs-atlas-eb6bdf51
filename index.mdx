@@ -1,97 +1,184 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: Klisk Documentation
+description: Build AI agents in Python with the easiest framework
 ---
 
-## Setting up
+<div className="relative py-20 overflow-hidden bg-gradient-to-br from-[#8B5CF6] via-[#7C3AED] to-[#6D28D9] dark:from-[#6D28D9] dark:via-[#5B21B6] dark:to-[#4C1D95]">
+  <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="text-center">
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+        Build AI Agents in Python
+      </h1>
+      <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-8">
+        Klisk is the easiest way to build AI agents programmatically. Define agents and tools with a simple API, iterate with an interactive Studio, and deploy to production — all from the CLI.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 justify-center items-center flex-wrap">
+        <a 
+          href="/quickstart" 
+          className="inline-block px-8 py-3.5 bg-white text-[#8B5CF6] font-semibold rounded-lg hover:bg-gray-100 transition-colors no-underline"
+        >
+          Get Started
+        </a>
+        <a 
+          href="/api/define-agent" 
+          className="inline-block px-8 py-3.5 border-2 border-white/30 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors no-underline"
+        >
+          View API Reference
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Quick Start</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Get up and running with Klisk in minutes</p>
+  
+  <Steps>
+    <Step title="Install Klisk">
+      Install the framework using pip:
+      
+      ```bash
+      pip install klisk
+      ```
+    </Step>
+    
+    <Step title="Create a new project">
+      Scaffold a new agent project with the CLI:
+      
+      ```bash
+      klisk create my-agent
+      cd my-agent
+      ```
+      
+      <Note>
+        This creates a ready-to-run project with `klisk.config.yaml`, `.env`, and source files in `src/`.
+      </Note>
+    </Step>
+    
+    <Step title="Define your agent">
+      Edit `src/main.py` to define your agent:
+      
+      ```python
+      from klisk import define_agent, get_tools
+      
+      agent = define_agent(
+          name="Assistant",
+          instructions="You are a helpful assistant.",
+          model="gpt-5.2",
+          tools=get_tools("greet"),
+      )
+      ```
+    </Step>
+    
+    <Step title="Run your agent">
+      Test your agent from the command line:
+      
+      ```bash
+      klisk run "Say hello to Juan"
+      ```
+      
+      Or start an interactive chat session:
+      
+      ```bash
+      klisk run -i
+      ```
+    </Step>
+  </Steps>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Explore Klisk</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Discover what makes Klisk powerful</p>
+  
+  <CardGroup cols={2}>
+    <Card title="Core Concepts" icon="lightbulb" href="/concepts/agents">
+      Learn about agents, tools, and how Klisk works under the hood
+    </Card>
+    <Card title="Interactive Studio" icon="grid" href="/development/studio">
+      Visual development environment with agent graphs and live chat
+    </Card>
+    <Card title="Multi-Provider Support" icon="plug" href="/concepts/models">
+      Use any LLM provider via LiteLLM — OpenAI, Anthropic, Google, and more
+    </Card>
+    <Card title="Builtin Tools" icon="wrench" href="/concepts/builtin-tools">
+      Web search, code interpreter, file search, and image generation
+    </Card>
+    <Card title="Production Deployment" icon="server" href="/deployment/production-server">
+      Deploy with REST API, WebSocket endpoints, and embeddable widgets
+    </Card>
+    <Card title="Cloud Run Deploy" icon="cloud" href="/deployment/cloud-run">
+      One-command deployment to Google Cloud Run
+    </Card>
+  </CardGroup>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Key Features</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Everything you need to build production-ready AI agents</p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#8B5CF6] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Simple API</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Define agents and tools with an intuitive Python API. No boilerplate, just clean code.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#8B5CF6] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Hot Reload</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Changes to your code update the Studio instantly. Iterate fast without restarting.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#8B5CF6] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Visual Studio</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        See your agent graph, test with live chat, and edit configurations from the browser.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#8B5CF6] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Multi-Provider</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Use OpenAI, Anthropic, Google, Mistral, and any LiteLLM-supported provider.
+      </p>
+    </div>
+  </div>
+</div>
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#1a1d27] dark:to-[#0f1117] p-8 md:p-12 text-center">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Ready to build your first agent?</h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+      Follow our quickstart guide to create, develop, and deploy your first AI agent with Klisk.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-block px-8 py-3.5 bg-[#8B5CF6] text-white font-semibold rounded-lg hover:bg-[#7C3AED] transition-colors no-underline"
+    >
+      Start Building
+    </a>
+  </div>
+</div>

@@ -1,0 +1,79 @@
+---
+title: klisk create
+description: Create a new Klisk project with the standard structure
+---
+
+## Usage
+
+```bash
+klisk create <name>
+```
+
+## Description
+
+Scaffolds a new Klisk project from the default template. Creates a complete project directory with configuration, example agents, and environment setup.
+
+## Arguments
+
+<ParamField path="name" type="string" required>
+  Name of the new project. Used for the project directory and configuration.
+</ParamField>
+
+## Behavior
+
+The command performs the following steps:
+
+1. **Creates project directory** at `~/klisk/<name>`
+2. **Copies template structure** from the default template
+3. **Generates configuration** by replacing `{{project_name}}` in `klisk.config.yaml`
+4. **Creates `.env` file** from `.env.example` for API key configuration
+5. **Displays next steps** to help you get started
+
+## Example
+
+```bash
+klisk create my-agent
+```
+
+Output:
+```
+Created project 'my-agent' at ~/klisk/my-agent
+
+Next steps:
+  1. Add your API key in ~/klisk/my-agent/.env
+  2. klisk dev my-agent          # start the Studio
+```
+
+## Project Structure
+
+A newly created project includes:
+
+```
+my-agent/
+├── klisk.config.yaml    # Project configuration
+├── .env                 # API keys (copied from .env.example)
+├── .env.example         # Template for environment variables
+├── agents/              # Agent definitions
+├── tools/               # Custom tool implementations
+└── main.py              # Entry point
+```
+
+## Error Handling
+
+The command will fail if:
+- A project with the same name already exists
+- The projects directory (`~/klisk/`) cannot be created
+
+## Next Steps
+
+After creating a project:
+
+1. **Configure environment**: Add your OpenAI API key to `.env`
+2. **Start development**: Run `klisk dev <name>` to launch the Studio
+3. **Customize**: Edit agents and tools to match your use case
+
+## Related Commands
+
+- [`klisk dev`](/cli/dev) - Start development server
+- [`klisk list`](/cli/list) - View all projects
+- [`klisk check`](/cli/check) - Validate project structure

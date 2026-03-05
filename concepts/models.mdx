@@ -1,0 +1,324 @@
+---
+title: Models
+description: Multi-provider LLM support and model configuration
+---
+
+Klisk supports OpenAI models natively and any LiteLLM-compatible provider, giving you access to hundreds of language models from different providers.
+
+## Model string format
+
+The `model` parameter in `define_agent()` uses a convention to determine whether to use OpenAI directly or route through LiteLLM:
+
+<ResponseField name="OpenAI (no slash)" type="string">
+  No `/` character → native OpenAI model
+</ResponseField>
+
+```python
+define_agent(name="Agent", model="gpt-5.2")         # OpenAI native
+define_agent(name="Agent", model="gpt-4.1")        # OpenAI native
+define_agent(name="Agent", model="o3")             # OpenAI native
+```
+
+<ResponseField name="OpenAI (with prefix)" type="string">
+  `openai/` prefix → strips prefix, uses native OpenAI
+</ResponseField>
+
+```python
+define_agent(name="Agent", model="openai/gpt-5.2")  # OpenAI native (prefix stripped)
+```
+
+<ResponseField name="LiteLLM (provider prefix)" type="string">
+  `provider/` format → routes through LiteLLM
+</ResponseField>
+
+```python
+define_agent(name="Agent", model="anthropic/claude-sonnet-4-5-20250929")
+define_agent(name="Agent", model="gemini/gemini-2.5-flash")
+define_agent(name="Agent", model="mistral/mistral-large-latest")
+```
+
+## OpenAI models
+
+OpenAI models work out of the box. Set your API key:
+
+```bash .env
+OPENAI_API_KEY=sk-...
+```
+
+Then reference the model directly:
+
+```python
+from klisk import define_agent
+
+agent = define_agent(
+    name="Assistant",
+    model="gpt-5.2",  # Default if omitted
+)
+```
+
+**Available OpenAI models:**
+- `gpt-5.2`, `gpt-5.1` — Latest GPT-5 series
+- `gpt-4.1`, `gpt-4o`, `gpt-4o-mini` — GPT-4 series
+- `o3`, `o4-mini`, `o1` — Reasoning models
+
+<Tip>
+  The default model is `gpt-5.2` if you don't specify the `model` parameter.
+</Tip>
+
+## LiteLLM providers
+
+For non-OpenAI models, Klisk uses [LiteLLM](https://docs.litellm.ai/) to provide a unified interface to 100+ LLM providers.
+
+### Installation
+
+LiteLLM is automatically installed when you use a non-OpenAI model string:
+
+```python
+# First time this runs, Klisk will prompt to install litellm
+agent = define_agent(
+    name="Agent",
+    model="anthropic/claude-sonnet-4-5-20250929",
+)
+```
+
+Or install it manually:
+
+```bash
+pip install litellm
+```
+
+### API keys
+
+Klisk auto-detects API keys from environment variables based on the provider prefix:
+
+```bash .env
+ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=...
+MISTRAL_API_KEY=...
+COHERE_API_KEY=...
+```
+
+The pattern is `{PROVIDER}_API_KEY` where `PROVIDER` is the uppercase version of the prefix:
+
+| Model String | Environment Variable |
+|--------------|---------------------|
+| `anthropic/...` | `ANTHROPIC_API_KEY` |
+| `gemini/...` | `GEMINI_API_KEY` |
+| `mistral/...` | `MISTRAL_API_KEY` |
+| `cohere/...` | `COHERE_API_KEY` |
+| `azure/...` | `AZURE_API_KEY` |
+
+<Note>
+  If you're using a non-OpenAI model and `OPENAI_API_KEY` is not set, Klisk automatically disables OpenAI tracing to prevent errors.
+</Note>
+
+### Model resolution
+
+When you specify a LiteLLM model, Klisk:
+
+1. Enables LiteLLM serializer compatibility patch to suppress Pydantic warnings
+2. Imports `LitellmModel` from the OpenAI Agents SDK
+3. Extracts the provider prefix (e.g., `anthropic` from `anthropic/claude-sonnet-4-5`)
+4. Looks up `{PROVIDER}_API_KEY` from environment variables
+5. Creates a `LitellmModel(model=model_str, api_key=api_key)` instance
+
+This happens automatically in `define_agent()` via the `_resolve_model()` function in `primitives.py:19`.
+
+## Popular providers
+
+### Anthropic (Claude)
+
+```python
+define_agent(
+    name="Agent",
+    model="anthropic/claude-sonnet-4-5-20250929",
+)
+```
+
+**Available models:**
+- `claude-sonnet-4-5-20250929` — Latest Claude Sonnet
+- `claude-opus-4` — Most capable
+- `claude-haiku-4` — Fast and efficient
+
+### Google (Gemini)
+
+```python
+define_agent(
+    name="Agent",
+    model="gemini/gemini-2.5-flash",
+)
+```
+
+**Available models:**
+- `gemini-2.5-flash` — Fast, cost-effective
+- `gemini-2.5-pro` — Advanced reasoning
+- `gemini-1.5-pro` — Previous generation
+
+### Mistral
+
+```python
+define_agent(
+    name="Agent",
+    model="mistral/mistral-large-latest",
+)
+```
+
+**Available models:**
+- `mistral-large-latest` — Most capable
+- `mistral-medium-latest` — Balanced
+- `mistral-small-latest` — Fast
+
+### Azure OpenAI
+
+```python
+define_agent(
+    name="Agent",
+    model="azure/gpt-4o",
+)
+```
+
+Requires additional Azure-specific environment variables. See [LiteLLM Azure docs](https://docs.litellm.ai/docs/providers/azure).
+
+## Reasoning effort
+
+For reasoning models (o-series and gpt-5+), you can control how much reasoning the model applies:
+
+```python
+define_agent(
+    name="Analyst",
+    model="o3",
+    reasoning_effort="high",
+)
+```
+
+**Valid values:** `"none"`, `"minimal"`, `"low"`, `"medium"`, `"high"`, `"xhigh"`
+
+<Info>
+  LiteLLM automatically translates `reasoning_effort` to each provider's equivalent parameter. For example, Anthropic's `thinking` parameter.
+</Info>
+
+<Warning>
+  Only set `reasoning_effort` for reasoning models (o1, o3, o4-mini, gpt-5.1, gpt-5.2). It has no effect on standard models like `gpt-4o` or `claude-sonnet-4-5`.
+</Warning>
+
+### When to use reasoning effort
+
+| Value | Use Case | Cost |
+|-------|----------|------|
+| `"none"` or `"minimal"` | Simple, routine tasks | Lower |
+| `"low"` or `"medium"` | Standard problem-solving | Moderate |
+| `"high"` or `"xhigh"` | Complex analysis, math, code | Higher |
+
+```python
+# Simple data extraction
+define_agent(
+    name="Extractor",
+    model="gpt-5.2",
+    reasoning_effort="minimal",
+)
+
+# Complex mathematical analysis
+define_agent(
+    name="MathSolver",
+    model="o3",
+    reasoning_effort="xhigh",
+)
+```
+
+## Temperature
+
+Control response randomness with the `temperature` parameter:
+
+```python
+define_agent(
+    name="CreativeWriter",
+    model="gpt-5.2",
+    temperature=1.5,  # More creative, diverse outputs
+)
+
+define_agent(
+    name="DataAnalyst",
+    model="gpt-5.2",
+    temperature=0.2,  # More focused, deterministic
+)
+```
+
+**Range:** `0.0` (deterministic) to `2.0` (very random)
+
+**Defaults:** Each model has its own default (usually around `0.7` to `1.0`)
+
+## Builtin tools compatibility
+
+Builtin tools (`web_search`, `code_interpreter`, `file_search`, `image_generation`) **only work with OpenAI models**:
+
+```python
+# ✅ Works
+define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    builtin_tools=["web_search"],
+)
+
+# ❌ Warns and disables builtin tools
+define_agent(
+    name="Researcher",
+    model="anthropic/claude-sonnet-4-5-20250929",
+    builtin_tools=["web_search"],  # Will be disabled with a warning
+)
+```
+
+This is checked at agent creation time in `primitives.py:104`. If you specify builtin tools with a non-OpenAI model, you'll see:
+
+```
+Warning: Builtin tools (web_search) are only supported with OpenAI models
+and will be disabled for 'anthropic/claude-sonnet-4-5-20250929'.
+```
+
+## Complete example
+
+```python
+from klisk import define_agent, get_tools
+
+# OpenAI with reasoning
+analyst = define_agent(
+    name="DataAnalyst",
+    model="o3",
+    reasoning_effort="high",
+    temperature=0.3,
+    tools=get_tools("analyze"),
+)
+
+# Anthropic with custom tools
+researcher = define_agent(
+    name="Researcher",
+    model="anthropic/claude-sonnet-4-5-20250929",
+    temperature=0.7,
+    tools=get_tools("search", "summarize"),
+)
+
+# Google with high creativity
+writer = define_agent(
+    name="Writer",
+    model="gemini/gemini-2.5-flash",
+    temperature=1.5,
+    tools=get_tools("draft", "revise"),
+)
+
+# OpenAI with builtin tools
+assistant = define_agent(
+    name="Assistant",
+    model="gpt-5.2",
+    builtin_tools=["web_search", "code_interpreter"],
+)
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Agents" icon="robot" href="/concepts/agents">
+    Learn more about agent configuration
+  </Card>
+  <Card title="Builtin Tools" icon="toolbox" href="/concepts/builtin-tools">
+    Explore provider-hosted tools for OpenAI models
+  </Card>
+</CardGroup>

@@ -1,0 +1,91 @@
+---
+title: "CodeInterpreter"
+description: "Code interpreter builtin tool for OpenAI models"
+---
+
+## Overview
+
+The `CodeInterpreter` class provides code execution capabilities for agents. This builtin tool is only supported with OpenAI models and allows agents to write and execute Python code in a sandboxed environment.
+
+## Class Definition
+
+```python
+from klisk.core.builtin_tools import CodeInterpreter
+```
+
+Defined in: `src/klisk/core/builtin_tools.py:17`
+
+## Parameters
+
+<ParamField path="container" type="dict[str, Any] | None" default="None">
+  Optional container configuration for the code interpreter environment. When `None`, default container settings are used.
+</ParamField>
+
+## Usage
+
+### Basic Usage (String Shortcut)
+
+```python
+from klisk import define_agent
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=["code_interpreter"],
+)
+```
+
+### Object Form with Custom Configuration
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import CodeInterpreter
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        CodeInterpreter(container={
+            "image": "python:3.11",
+            "env": {"CUSTOM_VAR": "value"}
+        })
+    ],
+)
+```
+
+### Default Configuration
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import CodeInterpreter
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        CodeInterpreter()  # Uses default container settings
+    ],
+)
+```
+
+### Multiple Builtin Tools
+
+```python
+from klisk import define_agent
+from klisk.core.builtin_tools import CodeInterpreter
+
+agent = define_agent(
+    model="gpt-4o",
+    builtin_tools=[
+        "web_search",
+        CodeInterpreter(),
+    ],
+)
+```
+
+## Important Notes
+
+<Warning>
+  The `CodeInterpreter` tool is only supported with OpenAI models. Using it with non-OpenAI models will raise a `ValueError`.
+</Warning>
+
+<Info>
+  When using the string shortcut `"code_interpreter"`, the default configuration with `container=None` is used.
+</Info>

@@ -1,0 +1,191 @@
+---
+title: klisk run
+description: Execute agents from the terminal with support for multimodal inputs
+---
+
+## Usage
+
+```bash
+klisk run [message] [options]
+```
+
+## Description
+
+Run your agent directly from the command line. Supports both single messages and interactive conversations, with the ability to attach images and PDF files.
+
+## Arguments
+
+<ParamField path="message" type="string">
+  Message to send to the agent. Omit for interactive mode.
+</ParamField>
+
+## Options
+
+<ParamField path="--project" type="string" default=".">
+  Project name or path. Use `-p` as shorthand.
+</ParamField>
+
+<ParamField path="--interactive" type="boolean" default="false">
+  Start an interactive conversation. Use `-i` as shorthand.
+</ParamField>
+
+## File Attachments
+
+Attach files using the `@` prefix:
+
+```bash
+klisk run "Analyze this image @photo.jpg"
+klisk run "Summarize this document @report.pdf"
+klisk run "Compare these @chart1.png @chart2.png"
+```
+
+### Supported File Types
+
+**Images** (up to 20MB each):
+- JPEG (`.jpg`, `.jpeg`)
+- PNG (`.png`)
+- GIF (`.gif`)
+- WebP (`.webp`)
+
+**Documents** (up to 20MB each):
+- PDF (`.pdf`)
+
+### File Format
+
+Files are automatically:
+- Base64-encoded
+- Formatted for the agent's model provider (OpenAI or LiteLLM)
+- Included in the request with appropriate MIME types
+
+## Examples
+
+### Single Message
+
+```bash
+klisk run "Hello, how can you help me?"
+```
+
+Output:
+```
+Running agent 'my-agent'...
+
+I can help you with a variety of tasks...
+```
+
+### Interactive Mode
+
+```bash
+klisk run --interactive
+```
+
+Output:
+```
+Chat with 'my-agent' (type 'exit' to quit)
+Tip: use @path to attach images or PDFs (e.g. @photo.jpg)
+
+You: Hello!
+Agent: Hi! How can I help you today?
+
+You: exit
+```
+
+### Specific Project
+
+```bash
+klisk run "What's the weather?" --project weather-agent
+```
+
+### With File Attachments
+
+```bash
+klisk run "Describe this image @screenshot.png" -p vision-agent
+```
+
+### Interactive with Custom Project
+
+```bash
+klisk run -i -p ~/custom/location/my-agent
+```
+
+## Interactive Mode
+
+In interactive mode:
+- Type messages at the `You:` prompt
+- Conversation context is preserved across messages
+- Attach files with `@filename` in any message
+- Type `exit` or `quit` to end the session
+- Press `Ctrl+C` or `Ctrl+D` to exit
+
+### Interactive Example
+
+```bash
+$ klisk run -i
+
+Chat with 'support-agent' (type 'exit' to quit)
+Tip: use @path to attach images or PDFs (e.g. @photo.jpg)
+
+You: I need help with this error @error.png
+Agent: I can see the error message. It's a connection timeout...
+
+You: How do I fix it?
+Agent: Here are the steps to resolve this issue...
+
+You: exit
+```
+
+## Context Preservation
+
+Interactive mode maintains conversation history:
+- Each message includes the full context
+- The agent remembers previous exchanges
+- Uses OpenAI's response ID system for continuity
+
+## Tracing
+
+By default, runs are traced for debugging. Tracing is automatically disabled when:
+- Files are attached (to avoid payload-too-large errors)
+- You can view traces in the Studio or OpenAI dashboard
+
+## Model Compatibility
+
+The command automatically detects whether your agent uses:
+- **OpenAI models** - Uses Responses API format
+- **LiteLLM providers** - Uses Chat Completions format
+
+File attachments are formatted correctly for each provider.
+
+## Error Handling
+
+**No agents found**:
+```
+Error: no agents found in the project.
+```
+Solution: Define at least one agent in your project.
+
+**File too large**:
+```
+Warning: photo.jpg exceeds 20MB, skipping.
+```
+Solution: Compress or resize files to under 20MB.
+
+**Unsupported file type**:
+```
+Warning: unsupported file type for document.docx, skipping.
+```
+Solution: Convert to PDF or use supported image formats.
+
+**File not found**:
+```
+@missing.jpg
+```
+The token is kept as plain text in the message.
+
+## Agent Selection
+
+If your project has multiple agents, `klisk run` uses the first agent discovered (alphabetically by name). To run a specific agent, structure your project to have only one agent or use the Studio for multi-agent projects.
+
+## Related Commands
+
+- [`klisk dev`](/cli/dev) - Interactive Studio for testing
+- [`klisk serve`](/cli/serve) - Production server
+- [`klisk check`](/cli/check) - Validate project setup
