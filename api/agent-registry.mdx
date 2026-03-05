@@ -298,3 +298,75 @@ tool = ToolEntry(
     source_file="src/tools.py"
 )
 ```
+
+---
+
+## ProjectSnapshot
+
+Dataclass representing a snapshot of all agents and tools in a project. Returned by `AgentRegistry.get_project_snapshot()`.
+
+### Fields
+
+<ParamField path="agents" type="dict[str, AgentEntry]" default="{}">
+  Dictionary mapping agent names to their `AgentEntry` objects
+</ParamField>
+
+<ParamField path="tools" type="dict[str, ToolEntry]" default="{}">
+  Dictionary mapping tool names to their `ToolEntry` objects
+</ParamField>
+
+<ParamField path="config" type="dict[str, Any]" default="{}">
+  Project configuration dictionary
+</ParamField>
+
+### Methods
+
+#### to_dict
+
+```python
+def to_dict(self) -> dict[str, Any]
+```
+
+Convert the snapshot to a JSON-serializable dictionary. Useful for sending project state to the Studio UI or API clients.
+
+**Returns:** Dictionary with serialized agents, tools, and config
+
+**Example:**
+
+```python
+from klisk.core.registry import AgentRegistry
+
+registry = AgentRegistry.get_instance()
+snapshot = registry.get_project_snapshot()
+
+# Convert to dict for JSON serialization
+data = snapshot.to_dict()
+
+# Structure:
+# {
+#   "agents": {
+#     "agent_name": {
+#       "name": "agent_name",
+#       "instructions": "...",
+#       "model": "...",
+#       "tools": [...],
+#       "temperature": 0.7,
+#       "reasoning_effort": None,
+#       "source_file": "src/main.py",
+#       "project": "my-agent"
+#     }
+#   },
+#   "tools": {
+#     "tool_name": {
+#       "name": "tool_name",
+#       "description": "...",
+#       "parameters": {...},
+#       "source_file": "src/tools/example.py",
+#       "project": "my-agent"
+#     }
+#   },
+#   "config": {}
+# }
+```
+
+**Source Reference:** `src/klisk/core/registry.py:34-66`

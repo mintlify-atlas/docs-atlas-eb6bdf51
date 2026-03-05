@@ -96,7 +96,8 @@
               "cli/serve",
               "cli/deploy",
               "cli/check",
-              "cli/list"
+              "cli/list",
+              "cli/delete"
             ]
           }
         ]

@@ -1,0 +1,126 @@
+---
+title: klisk delete
+description: Delete a Klisk project directory
+---
+
+## Overview
+
+The `klisk delete` command removes a Klisk project directory from your workspace. It performs validation to ensure you're deleting a valid Klisk project before removal.
+
+## Usage
+
+```bash
+klisk delete <name_or_path> [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="name_or_path" type="string" required>
+  Project name (from workspace) or path to the project directory to delete
+</ParamField>
+
+## Options
+
+<ParamField path="--force" type="flag">
+  Skip the confirmation prompt and delete immediately
+  
+  **Aliases:** `-f`
+  
+  **Default:** `False`
+</ParamField>
+
+## Behavior
+
+The `klisk delete` command:
+
+1. **Resolves the project path** — If you provide a project name, it looks in `~/.klisk/projects/`. Otherwise, it treats the argument as a direct path.
+
+2. **Validates the project** — Checks that:
+   - The directory exists
+   - It contains a `klisk.config.yaml` file (confirming it's a Klisk project)
+
+3. **Prompts for confirmation** — Unless `--force` is used, asks you to confirm the deletion
+
+4. **Deletes the directory** — Removes the entire project directory and all its contents
+
+<Warning>
+This operation is **irreversible**. All files in the project directory will be permanently deleted. Make sure you have backups of any important work.
+</Warning>
+
+## Examples
+
+### Delete by project name
+
+Delete a project from your workspace by name:
+
+```bash
+klisk delete my-agent
+```
+
+Output:
+```
+Delete project 'my-agent' at /Users/username/.klisk/projects/my-agent? [y/N]: y
+Deleted project 'my-agent'.
+```
+
+### Delete without confirmation
+
+Use the `--force` flag to skip the confirmation prompt:
+
+```bash
+klisk delete my-agent --force
+```
+
+### Delete by path
+
+Delete a project at a specific path:
+
+```bash
+klisk delete /path/to/my-agent
+```
+
+### Cancel deletion
+
+Press `N` or `Ctrl+C` when prompted to cancel:
+
+```bash
+klisk delete my-agent
+Delete project 'my-agent' at /Users/username/.klisk/projects/my-agent? [y/N]: n
+Aborted.
+```
+
+## Error Handling
+
+### Project doesn't exist
+
+```bash
+klisk delete nonexistent
+```
+
+Output:
+```
+Error: '/Users/username/.klisk/projects/nonexistent' does not exist.
+```
+
+### Not a Klisk project
+
+If the directory exists but doesn't have a `klisk.config.yaml` file:
+
+```bash
+klisk delete /some/random/directory
+```
+
+Output:
+```
+Error: '/some/random/directory' does not look like a Klisk project (no klisk.config.yaml).
+```
+
+## Source Reference
+
+Implementation: `src/klisk/cli/delete.py:13-37`
+
+## Related Commands
+
+- [`klisk create`](/cli/create) - Create a new project
+- [`klisk list`](/cli/list) - View all projects in your workspace
+- [`klisk check`](/cli/check) - Validate a project before deletion
